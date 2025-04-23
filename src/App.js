@@ -14,7 +14,7 @@ import * as THREE from 'three';
 import axios from 'axios';
 const _ = require('lodash');
 
-const host = 'http://localhost:5000'
+const host = 'http://localhost:3001'
 
 function Avatar({ avatar_url, speak, setSpeak, text, setAudioSource, playing }) {
 
@@ -297,7 +297,7 @@ function App() {
   const audioPlayer = useRef();
 
   const [speak, setSpeak] = useState(false);
-  const [text, setText] = useState("My name is Arwen. I'm a virtual human who can speak whatever you type here along with realistic facial movements.");
+  const [text, setText] = useState("I'm a virtual human who can speak whatever you type here along with realistic facial movements.");
   const [audioSource, setAudioSource] = useState(null);
   const [playing, setPlaying] = useState(false);
 
@@ -333,7 +333,7 @@ function App() {
       
       {/* <Stats /> */}
     <Canvas dpr={2} onCreated={(ctx) => {
-        ctx.gl.physicallyCorrectLights = true;
+        ctx.gl.physicallyCorrectLights = false;
       }}>
 
       <OrthographicCamera 
@@ -384,7 +384,7 @@ function Bg() {
 
   return(
     <mesh position={[0, 1.5, -2]} scale={[0.8, 0.8, 0.8]}>
-      <planeBufferGeometry />
+      <planeGeometry />
       <meshBasicMaterial map={texture} />
 
     </mesh>

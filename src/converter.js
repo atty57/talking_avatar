@@ -25,6 +25,7 @@ function modifiedKey(key) {
 }
 
 function createAnimation (recordedData, morphTargetDictionary, bodyPart) {
+  
 
   // console.log("----morphTargetDictionary", morphTargetDictionary)
 
