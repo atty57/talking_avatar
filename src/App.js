@@ -82,17 +82,12 @@ function Avatar({ avatar_url, speak, setSpeak, text, setAudioSource, playing }) 
 
   
   gltf.scene.traverse(node => {
-
-
     if(node.type === 'Mesh' || node.type === 'LineSegments' || node.type === 'SkinnedMesh') {
-
       node.castShadow = true;
       node.receiveShadow = true;
       node.frustumCulled = false;
 
-    
       if (node.name.includes("Body")) {
-
         node.castShadow = true;
         node.receiveShadow = true;
 
@@ -110,7 +105,6 @@ function Avatar({ avatar_url, speak, setSpeak, text, setAudioSource, playing }) 
 
         node.material.envMapIntensity = 0.8;
         // node.material.visible = false;
-
       }
 
       if (node.name.includes("Eyes")) {
@@ -119,8 +113,6 @@ function Avatar({ avatar_url, speak, setSpeak, text, setAudioSource, playing }) 
         // node.material.shininess = 100;
         node.material.roughness = 0.1;
         node.material.envMapIntensity = 0.5;
-
-
       }
 
       if (node.name.includes("Brows")) {
@@ -132,17 +124,13 @@ function Avatar({ avatar_url, speak, setSpeak, text, setAudioSource, playing }) 
       }
 
       if (node.name.includes("Teeth")) {
-
         node.receiveShadow = true;
         node.castShadow = true;
         node.material = new MeshStandardMaterial();
         node.material.roughness = 0.1;
         node.material.map = teethTexture;
         node.material.normalMap = teethNormalTexture;
-
         node.material.envMapIntensity = 0.7;
-
-
       }
 
       if (node.name.includes("Hair")) {
@@ -158,8 +146,6 @@ function Avatar({ avatar_url, speak, setSpeak, text, setAudioSource, playing }) 
         node.material.color.setHex(0x000000);
         
         node.material.envMapIntensity = 0.3;
-
-      
       }
 
       if (node.name.includes("TSHIRT")) {
@@ -171,30 +157,24 @@ function Avatar({ avatar_url, speak, setSpeak, text, setAudioSource, playing }) 
         node.material.color.setHex(0xffffff);
 
         node.material.envMapIntensity = 0.5;
-
-
       }
 
       if (node.name.includes("TeethLower")) {
         morphTargetDictionaryLowerTeeth = node.morphTargetDictionary;
       }
-
     }
-
   });
 
   const [clips, setClips] = useState([]);
   const mixer = useMemo(() => new THREE.AnimationMixer(gltf.scene), []);
 
   useEffect(() => {
-
     if (speak === false)
       return;
 
     makeSpeech(text)
-    .then( response => {
-
-      let {blendData, filename}= response.data;
+    .then(response => {
+      let {blendData, filename, generatedText} = response.data;
 
       let newClips = [ 
         createAnimation(blendData, morphTargetDictionaryBody, 'HG_Body'), 
@@ -204,14 +184,11 @@ function Avatar({ avatar_url, speak, setSpeak, text, setAudioSource, playing }) 
         
       setClips(newClips);
       setAudioSource(filename);
-
     })
     .catch(err => {
       console.error(err);
       setSpeak(false);
-
     })
-
   }, [speak]);
 
   let idleFbx = useFBX('/idle.fbx');
@@ -222,7 +199,6 @@ function Avatar({ avatar_url, speak, setSpeak, text, setAudioSource, playing }) 
   });
 
   idleClips[0].tracks = _.map(idleClips[0].tracks, track => {
-
     if (track.name.includes("Head")) {
       track.name = "head.quaternion";
     }
@@ -236,24 +212,19 @@ function Avatar({ avatar_url, speak, setSpeak, text, setAudioSource, playing }) 
     }
 
     return track;
-
   });
 
   useEffect(() => {
-
     let idleClipAction = mixer.clipAction(idleClips[0]);
     idleClipAction.play();
 
     let blinkClip = createAnimation(blinkData, morphTargetDictionaryBody, 'HG_Body');
     let blinkAction = mixer.clipAction(blinkClip);
     blinkAction.play();
-
-
   }, []);
 
   // Play animation clips when available
   useEffect(() => {
-
     if (playing === false)
       return;
     
@@ -261,16 +232,12 @@ function Avatar({ avatar_url, speak, setSpeak, text, setAudioSource, playing }) 
         let clipAction = mixer.clipAction(clip);
         clipAction.setLoop(THREE.LoopOnce);
         clipAction.play();
-
     });
-
   }, [playing]);
-
   
   useFrame((state, delta) => {
     mixer.update(delta);
   });
-
 
   return (
     <group name="avatar">
@@ -279,27 +246,42 @@ function Avatar({ avatar_url, speak, setSpeak, text, setAudioSource, playing }) 
   );
 }
 
-
-function makeSpeech(text) {
-  return axios.post(host + '/talk', { text });
+function makeSpeech(text, useAI = false, prompt = "", model = null) {
+  return axios.post(host + '/talk', { 
+    text,
+    useAI,
+    prompt: prompt || text,
+    model
+  });
 }
 
 const STYLES = {
-  area: {position: 'absolute', bottom:'10px', left: '10px', zIndex: 500},
-  text: {margin: '0px', width:'300px', padding: '5px', background: 'none', color: '#ffffff', fontSize: '1.2em', border: 'none'},
-  speak: {padding: '10px', marginTop: '5px', display: 'block', color: '#FFFFFF', background: '#222222', border: 'None'},
+  area: {position: 'absolute', bottom:'10px', left: '10px', zIndex: 500, width: '320px'},
+  text: {margin: '0px', width:'100%', padding: '5px', background: 'none', color: '#ffffff', fontSize: '1.2em', border: 'none'},
+  speak: {padding: '10px', marginTop: '5px', display: 'block', width: '100%', color: '#FFFFFF', background: '#222222', border: 'None', cursor: 'pointer'},
+  speakDisabled: {padding: '10px', marginTop: '5px', display: 'block', width: '100%', color: '#AAAAAA', background: '#333333', border: 'None', cursor: 'not-allowed'},
   area2: {position: 'absolute', top:'5px', right: '15px', zIndex: 500},
-  label: {color: '#777777', fontSize:'0.8em'}
+  label: {color: '#777777', fontSize:'0.8em'},
+  aiControl: {marginTop: '10px', display: 'flex', alignItems: 'center', color: '#ffffff'},
+  aiLabel: {marginRight: '10px', fontSize: '0.9em', color: '#aaaaaa'},
+  promptArea: {marginTop: '10px'},
+  promptText: {margin: '0px', width:'100%', padding: '5px', background: 'none', color: '#ffffff', fontSize: '1em', border: 'none'},
+  modelSelector: {marginLeft: '10px', background: '#333333', color: '#ffffff', border: 'none', padding: '3px'}
 }
 
 function App() {
-
   const audioPlayer = useRef();
 
   const [speak, setSpeak] = useState(false);
-  const [text, setText] = useState("I'm a virtual human who can speak whatever you type here along with realistic facial movements.");
+  const [text, setText] = useState("I'm a virtual human who can speak along with realistic facial movements.");
   const [audioSource, setAudioSource] = useState(null);
   const [playing, setPlaying] = useState(false);
+  
+  // State variables for LLM integration
+  const [useAI, setUseAI] = useState(false);
+  const [prompt, setPrompt] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedModel, setSelectedModel] = useState("llama3.2");
 
   // End of play
   function playerEnded(e) {
@@ -308,19 +290,123 @@ function App() {
     setPlaying(false);
   }
 
-  // Player is read
+  // Player is ready
   function playerReady(e) {
     audioPlayer.current.audioEl.current.play();
     setPlaying(true);
+  }
 
-  }  
+  // Handle the speak button click - fixed to prevent double API calls
+  const handleSpeak = () => {
+    if (useAI) {
+      setIsGenerating(true);
+    } else {
+      setSpeak(true);
+    }
+  }
+
+  // Effect to handle LLM text generation
+  useEffect(() => {
+    if (!isGenerating) return;
+    console.log("Generating AI response with:", { prompt: prompt || text, model: selectedModel });
+
+    axios.post(host + '/talk', { 
+      text,
+      useAI: true,
+      prompt: prompt || text,
+      model: selectedModel
+    })
+    .then(response => {
+      setIsGenerating(false);
+      
+      if (response.data.generatedText) {
+        // Update the text with the AI-generated response
+        setText(response.data.generatedText);
+        
+        // Now trigger the speak action with the generated text
+        setSpeak(true);
+      }
+    })
+    .catch(err => {
+      console.error("Error generating response:", err);
+      setIsGenerating(false);
+    });
+  }, [isGenerating]);
+
+  // Get button style based on disable state
+  const getButtonStyle = () => {
+    if (speak || isGenerating) {
+      return STYLES.speakDisabled;
+    }
+    return STYLES.speak;
+  }
+
+  // Get button text based on state
+  const getButtonText = () => {
+    if (isGenerating) return 'Generating response...';
+    if (speak) return 'Running...';
+    return 'Speak';
+  }
 
   return (
     <div className="full">
       <div style={STYLES.area}>
-        <textarea rows={4} type="text" style={STYLES.text} value={text} onChange={(e) => setText(e.target.value.substring(0, 200))} />
-        <button onClick={() => setSpeak(true)} style={STYLES.speak}> { speak? 'Running...': 'Speak' }</button>
-
+        <textarea 
+          rows={4} 
+          type="text" 
+          style={STYLES.text} 
+          value={text} 
+          onChange={(e) => setText(e.target.value.substring(0, 200))} 
+          placeholder={useAI ? "AI will generate a response..." : "Type what you want the avatar to say..."}
+          disabled={isGenerating || speak}
+        />
+        
+        <div style={STYLES.aiControl}>
+          <input 
+            type="checkbox" 
+            id="useAI" 
+            checked={useAI} 
+            onChange={(e) => setUseAI(e.target.checked)} 
+            disabled={isGenerating || speak}
+          />
+          <label htmlFor="useAI" style={STYLES.aiLabel}>Use AI to generate response</label>
+          
+          {useAI && (
+            <select 
+              style={STYLES.modelSelector} 
+              value={selectedModel} 
+              onChange={(e) => setSelectedModel(e.target.value)}
+              disabled={isGenerating || speak}
+            >
+              <option value="" disabled>Select a model</option>
+              <option value="llama3.2">Llama 3.2</option>
+              <option value="llama3">Llama 3</option>
+              <option value="phi3">Phi-3</option>
+            </select>
+          )}
+        </div>
+        
+        {useAI && (
+          <div style={STYLES.promptArea}>
+            <textarea 
+              rows={3} 
+              type="text" 
+              style={STYLES.promptText} 
+              value={prompt} 
+              onChange={(e) => setPrompt(e.target.value)} 
+              placeholder="Enter a prompt for the AI assistant..."
+              disabled={isGenerating || speak}
+            />
+          </div>
+        )}
+        
+        <button 
+          onClick={handleSpeak} 
+          style={getButtonStyle()} 
+          disabled={speak || isGenerating}
+        > 
+          {getButtonText()} 
+        </button>
       </div>
 
       <ReactAudioPlayer
@@ -328,36 +414,27 @@ function App() {
         ref={audioPlayer}
         onEnded={playerEnded}
         onCanPlayThrough={playerReady}
-        
       />
       
-      {/* <Stats /> */}
-    <Canvas dpr={2} onCreated={(ctx) => {
-        ctx.gl.physicallyCorrectLights = false;
-      }}>
+      <Canvas dpr={2} onCreated={(ctx) => {
+          ctx.gl.physicallyCorrectLights = false;
+        }}>
 
-      <OrthographicCamera 
-      makeDefault
-      zoom={2000}
-      position={[0, 1.65, 1]}
-      />
+        <OrthographicCamera 
+          makeDefault
+          zoom={2000}
+          position={[0, 1.65, 1]}
+        />
 
-      {/* <OrbitControls
-        target={[0, 1.65, 0]}
-      /> */}
+        <Suspense fallback={null}>
+          <Environment background={false} files="/images/photo_studio_loft_hall_1k.hdr" />
+        </Suspense>
 
-      <Suspense fallback={null}>
-        <Environment background={false} files="/images/photo_studio_loft_hall_1k.hdr" />
-      </Suspense>
+        <Suspense fallback={null}>
+          <Bg />
+        </Suspense>
 
-      <Suspense fallback={null}>
-        <Bg />
-      </Suspense>
-
-      <Suspense fallback={null}>
-
-
-
+        <Suspense fallback={null}>
           <Avatar 
             avatar_url="/model.glb" 
             speak={speak} 
@@ -365,31 +442,24 @@ function App() {
             text={text}
             setAudioSource={setAudioSource}
             playing={playing}
-            />
-
+          />
+        </Suspense>
+      </Canvas>
       
-      </Suspense>
-
-  
-
-  </Canvas>
-  <Loader dataInterpolation={(p) => `Loading... please wait`}  />
-  </div>
-  )
+      <Loader dataInterpolation={(p) => `Loading... please wait`} />
+    </div>
+  );
 }
 
 function Bg() {
-  
   const texture = useTexture('/images/bg.webp');
 
   return(
     <mesh position={[0, 1.5, -2]} scale={[0.8, 0.8, 0.8]}>
       <planeGeometry />
       <meshBasicMaterial map={texture} />
-
     </mesh>
-  )
-
+  );
 }
 
 export default App;
