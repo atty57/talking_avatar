@@ -257,31 +257,89 @@ function makeSpeech(text, useAI = false, prompt = "", model = null) {
 
 const STYLES = {
   area: {position: 'absolute', bottom:'10px', left: '10px', zIndex: 500, width: '320px'},
-  text: {margin: '0px', width:'100%', padding: '5px', background: 'none', color: '#ffffff', fontSize: '1.2em', border: 'none'},
-  speak: {padding: '10px', marginTop: '5px', display: 'block', width: '100%', color: '#FFFFFF', background: '#222222', border: 'None', cursor: 'pointer'},
-  speakDisabled: {padding: '10px', marginTop: '5px', display: 'block', width: '100%', color: '#AAAAAA', background: '#333333', border: 'None', cursor: 'not-allowed'},
+  text: {margin: '0px', width:'100%', padding: '5px', background: 'none', color: '#ffffff', fontSize: '1.2em', border: 'none', resize: 'vertical'},
+  speak: {padding: '10px', marginTop: '5px', display: 'block', width: '100%', color: '#FFFFFF', background: '#1a73e8', border: 'None', cursor: 'pointer', borderRadius: '4px'},
+  speakDisabled: {padding: '10px', marginTop: '5px', display: 'block', width: '100%', color: '#AAAAAA', background: '#333333', border: 'None', cursor: 'not-allowed', borderRadius: '4px'},
   area2: {position: 'absolute', top:'5px', right: '15px', zIndex: 500},
   label: {color: '#777777', fontSize:'0.8em'},
   aiControl: {marginTop: '10px', display: 'flex', alignItems: 'center', color: '#ffffff'},
   aiLabel: {marginRight: '10px', fontSize: '0.9em', color: '#aaaaaa'},
   promptArea: {marginTop: '10px'},
-  promptText: {margin: '0px', width:'100%', padding: '5px', background: 'none', color: '#ffffff', fontSize: '1em', border: 'none'},
-  modelSelector: {marginLeft: '10px', background: '#333333', color: '#ffffff', border: 'none', padding: '3px'}
+  promptText: {margin: '0px', width:'100%', padding: '5px', background: 'none', color: '#ffffff', fontSize: '1em', border: 'none', resize: 'vertical'},
+  modelSelector: {marginLeft: '10px', background: '#333333', color: '#ffffff', border: 'none', padding: '3px', borderRadius: '3px'},
+  // New medical assistant styles
+  medicalBadge: {
+    position: 'absolute',
+    top: '10px',
+    left: '10px',
+    background: 'rgba(0,100,200,0.7)',
+    padding: '5px 10px',
+    borderRadius: '15px',
+    display: 'flex',
+    alignItems: 'center',
+    zIndex: 500
+  },
+  medicalIcon: {
+    fontSize: '1.2em',
+    marginRight: '5px'
+  },
+  badgeText: {
+    color: '#ffffff',
+    fontWeight: 'bold',
+    fontSize: '0.9em'
+  },
+  infoBox: {
+    background: 'rgba(0,0,0,0.5)',
+    padding: '10px',
+    borderRadius: '5px',
+    marginBottom: '10px'
+  },
+  infoTitle: {
+    color: '#ffffff',
+    margin: '0 0 5px 0',
+    fontSize: '1.2em'
+  },
+  infoText: {
+    color: '#cccccc',
+    margin: '0',
+    fontSize: '0.9em',
+    lineHeight: '1.4'
+  },
+  conversationHistory: {
+    marginBottom: '10px', 
+    maxHeight: '150px', 
+    overflowY: 'auto',
+    background: 'rgba(0,0,0,0.3)',
+    padding: '8px',
+    borderRadius: '5px'
+  },
+  historyMessage: {
+    marginBottom: '8px',
+    fontSize: '0.9em',
+    color: '#cccccc'
+  },
+  userMessage: {
+    color: '#ffffff',
+    fontWeight: 'bold'
+  }
 }
 
 function App() {
   const audioPlayer = useRef();
 
   const [speak, setSpeak] = useState(false);
-  const [text, setText] = useState("I'm a virtual human who can speak along with realistic facial movements.");
+  const [text, setText] = useState("Hello, I'm a Virtual Dr. , your medical assistant. How can I help you today?");
   const [audioSource, setAudioSource] = useState(null);
   const [playing, setPlaying] = useState(false);
   
   // State variables for LLM integration
-  const [useAI, setUseAI] = useState(false);
+  const [useAI, setUseAI] = useState(true); // Set to true by default for medical assistant
   const [prompt, setPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedModel, setSelectedModel] = useState("llama3.2");
+  
+  // Conversation history for medical context
+  const [conversationHistory, setConversationHistory] = useState([]);
 
   // End of play
   function playerEnded(e) {
@@ -298,6 +356,14 @@ function App() {
 
   // Handle the speak button click - fixed to prevent double API calls
   const handleSpeak = () => {
+    // Add user input to conversation history
+    if (prompt) {
+      setConversationHistory([...conversationHistory, {
+        role: 'user',
+        content: prompt
+      }]);
+    }
+    
     if (useAI) {
       setIsGenerating(true);
     } else {
@@ -323,8 +389,17 @@ function App() {
         // Update the text with the AI-generated response
         setText(response.data.generatedText);
         
+        // Add AI response to conversation history
+        setConversationHistory(prev => [...prev, {
+          role: 'assistant',
+          content: response.data.generatedText
+        }]);
+        
         // Now trigger the speak action with the generated text
         setSpeak(true);
+        
+        // Clear the prompt field after generating
+        setPrompt("");
       }
     })
     .catch(err => {
@@ -343,25 +418,70 @@ function App() {
 
   // Get button text based on state
   const getButtonText = () => {
-    if (isGenerating) return 'Generating response...';
-    if (speak) return 'Running...';
-    return 'Speak';
+    if (isGenerating) return 'Analyzing your symptoms...';
+    if (speak) return 'Speaking...';
+    return 'Consult';
   }
 
   return (
     <div className="full">
+      {/* Medical Badge */}
+      <div style={STYLES.medicalBadge}>
+        <span style={STYLES.medicalIcon}>⚕️</span>
+        <span style={STYLES.badgeText}>Medical Assistant</span>
+      </div>
+      
       <div style={STYLES.area}>
+        {/* Info Box */}
+        <div style={STYLES.infoBox}>
+          <h3 style={STYLES.infoTitle}>Virtual Medical Consultation</h3>
+          <p style={STYLES.infoText}>
+            I'm a clinical expert designed to understand your symptoms and provide medical guidance. 
+            Please describe your symptoms in detail for me to better understand your situation.
+          </p>
+        </div>
+        
+        {/* Conversation History */}
+        {conversationHistory.length > 0 && (
+          <div style={STYLES.conversationHistory}>
+            {conversationHistory.map((message, index) => (
+              <div key={index} style={STYLES.historyMessage}>
+                <span style={message.role === 'user' ? STYLES.userMessage : null}>
+                  {message.role === 'user' ? 'You: ' : 'Virtual Dr. : '}
+                </span>
+                {message.content}
+              </div>
+            ))}
+          </div>
+        )}
+      
+        {/* Current AI Response */}
         <textarea 
           rows={4} 
           type="text" 
           style={STYLES.text} 
           value={text} 
-          onChange={(e) => setText(e.target.value.substring(0, 200))} 
-          placeholder={useAI ? "AI will generate a response..." : "Type what you want the avatar to say..."}
-          disabled={isGenerating || speak}
+          onChange={(e) => setText(e.target.value.substring(0, 500))} 
+          placeholder="Current assistant response..."
+          disabled={true}
+          readOnly
         />
         
-        <div style={STYLES.aiControl}>
+        {/* User Input Area */}
+        <div style={STYLES.promptArea}>
+          <textarea 
+            rows={3} 
+            type="text" 
+            style={STYLES.promptText} 
+            value={prompt} 
+            onChange={(e) => setPrompt(e.target.value)} 
+            placeholder="Describe your symptoms or ask a health question..."
+            disabled={isGenerating || speak}
+          />
+        </div>
+        
+        {/* Model Selection (Hidden in UI but kept for functionality) */}
+        <div style={{display: 'none'}}>
           <input 
             type="checkbox" 
             id="useAI" 
@@ -369,41 +489,25 @@ function App() {
             onChange={(e) => setUseAI(e.target.checked)} 
             disabled={isGenerating || speak}
           />
-          <label htmlFor="useAI" style={STYLES.aiLabel}>Use AI to generate response</label>
           
-          {useAI && (
-            <select 
-              style={STYLES.modelSelector} 
-              value={selectedModel} 
-              onChange={(e) => setSelectedModel(e.target.value)}
-              disabled={isGenerating || speak}
-            >
-              <option value="" disabled>Select a model</option>
-              <option value="llama3.2">Llama 3.2</option>
-              <option value="llama3">Llama 3</option>
-              <option value="phi3">Phi-3</option>
-            </select>
-          )}
+          <select 
+            style={STYLES.modelSelector} 
+            value={selectedModel} 
+            onChange={(e) => setSelectedModel(e.target.value)}
+            disabled={isGenerating || speak}
+          >
+            <option value="" disabled>Select a model</option>
+            <option value="llama3.2">Clinical Expert</option>
+            <option value="llama3">Medical Specialist</option>
+            <option value="phi3">General Practitioner</option>
+          </select>
         </div>
         
-        {useAI && (
-          <div style={STYLES.promptArea}>
-            <textarea 
-              rows={3} 
-              type="text" 
-              style={STYLES.promptText} 
-              value={prompt} 
-              onChange={(e) => setPrompt(e.target.value)} 
-              placeholder="Enter a prompt for the AI assistant..."
-              disabled={isGenerating || speak}
-            />
-          </div>
-        )}
-        
+        {/* Speak/Consult Button */}
         <button 
           onClick={handleSpeak} 
           style={getButtonStyle()} 
-          disabled={speak || isGenerating}
+          disabled={speak || isGenerating || !prompt.trim()}
         > 
           {getButtonText()} 
         </button>
@@ -455,7 +559,7 @@ function Bg() {
   const texture = useTexture('/images/bg.webp');
 
   return(
-    <mesh position={[0, 1.5, -2]} scale={[0.8, 0.8, 0.8]}>
+    <mesh position={[0.02, 1.56, -2]} scale={[1, 1, 1]}>
       <planeGeometry />
       <meshBasicMaterial map={texture} />
     </mesh>
