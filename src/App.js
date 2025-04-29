@@ -256,73 +256,172 @@ function makeSpeech(text, useAI = false, prompt = "", model = null) {
 }
 
 const STYLES = {
-  area: {position: 'absolute', bottom:'10px', left: '10px', zIndex: 500, width: '320px'},
-  text: {margin: '0px', width:'100%', padding: '5px', background: 'none', color: '#ffffff', fontSize: '1.2em', border: 'none', resize: 'vertical'},
-  speak: {padding: '10px', marginTop: '5px', display: 'block', width: '100%', color: '#FFFFFF', background: '#1a73e8', border: 'None', cursor: 'pointer', borderRadius: '4px'},
-  speakDisabled: {padding: '10px', marginTop: '5px', display: 'block', width: '100%', color: '#AAAAAA', background: '#333333', border: 'None', cursor: 'not-allowed', borderRadius: '4px'},
-  area2: {position: 'absolute', top:'5px', right: '15px', zIndex: 500},
-  label: {color: '#777777', fontSize:'0.8em'},
-  aiControl: {marginTop: '10px', display: 'flex', alignItems: 'center', color: '#ffffff'},
-  aiLabel: {marginRight: '10px', fontSize: '0.9em', color: '#aaaaaa'},
-  promptArea: {marginTop: '10px'},
-  promptText: {margin: '0px', width:'100%', padding: '5px', background: 'none', color: '#ffffff', fontSize: '1em', border: 'none', resize: 'vertical'},
-  modelSelector: {marginLeft: '10px', background: '#333333', color: '#ffffff', border: 'none', padding: '3px', borderRadius: '3px'},
-  // New medical assistant styles
-  medicalBadge: {
+  container: {
     position: 'absolute',
-    top: '10px',
-    left: '10px',
-    background: 'rgba(0,100,200,0.7)',
-    padding: '5px 10px',
-    borderRadius: '15px',
+    bottom: '30px',
+    left: '30px',  // Changed from 50% and transform to position on the left
+    width: '350px',
+    maxWidth: '350px',
+    zIndex: 500,
+    borderRadius: '12px',
+    overflow: 'hidden',
+    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+    background: 'rgba(30, 41, 59, 0.85)',
+    backdropFilter: 'blur(10px)'
+  },
+  header: {
     display: 'flex',
     alignItems: 'center',
-    zIndex: 500
+    padding: '14px 20px',
+    background: 'rgba(14, 116, 144, 0.9)',
+    color: 'white',
+    borderTopLeftRadius: '12px',
+    borderTopRightRadius: '12px'
   },
-  medicalIcon: {
-    fontSize: '1.2em',
-    marginRight: '5px'
+avatar: {
+  width: '36px',
+  height: '36px',
+  borderRadius: '50%',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  background: 'white',
+  marginRight: '12px',
+  fontWeight: 'bold',
+  fontSize: '22px', // Slightly increased size for better visibility
+  color: 'rgba(14, 116, 144, 1)'
+},
+  headerText: {
+    margin: 0,
+    fontWeight: '600',
+    fontSize: '18px'
   },
-  badgeText: {
-    color: '#ffffff',
-    fontWeight: 'bold',
-    fontSize: '0.9em'
+  statusBadge: {
+    marginLeft: 'auto',
+    padding: '4px 8px',
+    borderRadius: '12px',
+    fontSize: '12px',
+    background: 'rgba(255, 255, 255, 0.2)',
+    color: 'white'
   },
-  infoBox: {
-    background: 'rgba(0,0,0,0.5)',
-    padding: '10px',
-    borderRadius: '5px',
-    marginBottom: '10px'
-  },
-  infoTitle: {
-    color: '#ffffff',
-    margin: '0 0 5px 0',
-    fontSize: '1.2em'
-  },
-  infoText: {
-    color: '#cccccc',
-    margin: '0',
-    fontSize: '0.9em',
-    lineHeight: '1.4'
-  },
-  conversationHistory: {
-    marginBottom: '10px', 
-    maxHeight: '150px', 
+  conversationContainer: {
+    maxHeight: '250px',
     overflowY: 'auto',
-    background: 'rgba(0,0,0,0.3)',
-    padding: '8px',
-    borderRadius: '5px'
+    padding: '15px 20px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px'
   },
-  historyMessage: {
-    marginBottom: '8px',
-    fontSize: '0.9em',
-    color: '#cccccc'
+  messageUser: {
+    alignSelf: 'flex-end',
+    background: 'rgba(14, 116, 144, 0.9)',
+    color: 'white',
+    padding: '10px 14px',
+    borderRadius: '18px 18px 4px 18px',
+    maxWidth: '85%',
+    wordBreak: 'break-word',
+    boxShadow: '0 2px 5px rgba(0, 0, 0, 0.1)'
   },
-  userMessage: {
-    color: '#ffffff',
-    fontWeight: 'bold'
+  messageAssistant: {
+    alignSelf: 'flex-start',
+    background: 'rgba(51, 65, 85, 0.8)',
+    color: 'white',
+    padding: '10px 14px',
+    borderRadius: '18px 18px 18px 4px',
+    maxWidth: '85%',
+    wordBreak: 'break-word',
+    boxShadow: '0 2px 5px rgba(0, 0, 0, 0.1)'
+  },
+  responseArea: {
+    padding: '15px 20px'
+  },
+  currentResponseBox: {
+    background: 'rgba(51, 65, 85, 0.5)',
+    padding: '10px 14px',
+    borderRadius: '8px',
+    marginBottom: '12px',
+    color: '#94a3b8',
+    fontSize: '14px',
+    fontStyle: 'italic'
+  },
+  inputContainer: {
+    display: 'flex',
+    gap: '8px',
+    position: 'relative'
+  },
+  input: {
+    flex: '1',
+    padding: '14px',
+    paddingRight: '50px',
+    background: 'rgba(51, 65, 85, 0.5)',
+    border: 'none',
+    borderRadius: '8px',
+    color: 'white',
+    fontSize: '15px',
+    resize: 'none',
+    fontFamily: 'inherit'
+  },
+  sendButton: {
+    position: 'absolute',
+    right: '10px',
+    bottom: '10px',
+    width: '36px',
+    height: '36px',
+    borderRadius: '50%',
+    background: 'rgba(14, 116, 144, 0.9)',
+    color: 'white',
+    border: 'none',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    transition: 'all 0.2s'
+  },
+  sendButtonDisabled: {
+    position: 'absolute',
+    right: '10px',
+    bottom: '10px',
+    width: '36px',
+    height: '36px',
+    borderRadius: '50%',
+    background: 'rgba(100, 116, 139, 0.3)',
+    color: 'rgba(255, 255, 255, 0.5)',
+    border: 'none',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'not-allowed'
+  },
+  sendIcon: {
+    width: '20px',
+    height: '20px',
+    fill: 'currentColor'
+  },
+  loadingDots: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '20px'
+  },
+  dot: {
+    width: '4px',
+    height: '4px',
+    margin: '0 2px',
+    borderRadius: '50%',
+    background: 'white',
+    animation: 'bounce 1.5s infinite ease-in-out'
+  },
+  infoSection: {
+    padding: '12px 20px',
+    borderTop: '1px solid rgba(100, 116, 139, 0.2)',
+    fontSize: '12px',
+    color: '#94a3b8',
+    textAlign: 'center'
+  },
+  hiddenControls: {
+    display: 'none'
   }
-}
+};
 
 function App() {
   const audioPlayer = useRef();
@@ -340,6 +439,15 @@ function App() {
   
   // Conversation history for medical context
   const [conversationHistory, setConversationHistory] = useState([]);
+  const conversationContainerRef = useRef(null);
+
+  // Scroll conversation to bottom whenever it changes
+  useEffect(() => {
+    if (conversationContainerRef.current) {
+      const element = conversationContainerRef.current;
+      element.scrollTop = element.scrollHeight;
+    }
+  }, [conversationHistory]);
 
   // End of play
   function playerEnded(e) {
@@ -408,111 +516,38 @@ function App() {
     });
   }, [isGenerating]);
 
-  // Get button style based on disable state
-  const getButtonStyle = () => {
-    if (speak || isGenerating) {
-      return STYLES.speakDisabled;
+  // Render the send button with appropriate state
+  const renderSendButton = () => {
+    const isDisabled = speak || isGenerating || !prompt.trim();
+    const buttonStyle = isDisabled ? STYLES.sendButtonDisabled : STYLES.sendButton;
+    
+    if (isGenerating) {
+      return (
+        <div style={buttonStyle}>
+          <div style={STYLES.loadingDots}>
+            <span style={{...STYLES.dot, animationDelay: '0s'}}></span>
+            <span style={{...STYLES.dot, animationDelay: '0.2s'}}></span>
+            <span style={{...STYLES.dot, animationDelay: '0.4s'}}></span>
+          </div>
+        </div>
+      );
     }
-    return STYLES.speak;
-  }
-
-  // Get button text based on state
-  const getButtonText = () => {
-    if (isGenerating) return 'Analyzing your symptoms...';
-    if (speak) return 'Speaking...';
-    return 'Consult';
-  }
+    
+    return (
+      <button 
+        onClick={handleSpeak} 
+        style={buttonStyle} 
+        disabled={isDisabled}
+      >
+        <svg style={STYLES.sendIcon} viewBox="0 0 24 24">
+          <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+        </svg>
+      </button>
+    );
+  };
 
   return (
     <div className="full">
-      {/* Medical Badge */}
-      <div style={STYLES.medicalBadge}>
-        <span style={STYLES.medicalIcon}>⚕️</span>
-        <span style={STYLES.badgeText}>Medical Assistant</span>
-      </div>
-      
-      <div style={STYLES.area}>
-        {/* Info Box */}
-        <div style={STYLES.infoBox}>
-          <h3 style={STYLES.infoTitle}>Virtual Medical Consultation</h3>
-          <p style={STYLES.infoText}>
-            I'm a clinical expert designed to understand your symptoms and provide medical guidance. 
-            Please describe your symptoms in detail for me to better understand your situation.
-          </p>
-        </div>
-        
-        {/* Conversation History */}
-        {conversationHistory.length > 0 && (
-          <div style={STYLES.conversationHistory}>
-            {conversationHistory.map((message, index) => (
-              <div key={index} style={STYLES.historyMessage}>
-                <span style={message.role === 'user' ? STYLES.userMessage : null}>
-                  {message.role === 'user' ? 'You: ' : 'Virtual Dr. : '}
-                </span>
-                {message.content}
-              </div>
-            ))}
-          </div>
-        )}
-      
-        {/* Current AI Response */}
-        <textarea 
-          rows={4} 
-          type="text" 
-          style={STYLES.text} 
-          value={text} 
-          onChange={(e) => setText(e.target.value.substring(0, 500))} 
-          placeholder="Current assistant response..."
-          disabled={true}
-          readOnly
-        />
-        
-        {/* User Input Area */}
-        <div style={STYLES.promptArea}>
-          <textarea 
-            rows={3} 
-            type="text" 
-            style={STYLES.promptText} 
-            value={prompt} 
-            onChange={(e) => setPrompt(e.target.value)} 
-            placeholder="Describe your symptoms or ask a health question..."
-            disabled={isGenerating || speak}
-          />
-        </div>
-        
-        {/* Model Selection (Hidden in UI but kept for functionality) */}
-        <div style={{display: 'none'}}>
-          <input 
-            type="checkbox" 
-            id="useAI" 
-            checked={useAI} 
-            onChange={(e) => setUseAI(e.target.checked)} 
-            disabled={isGenerating || speak}
-          />
-          
-          <select 
-            style={STYLES.modelSelector} 
-            value={selectedModel} 
-            onChange={(e) => setSelectedModel(e.target.value)}
-            disabled={isGenerating || speak}
-          >
-            <option value="" disabled>Select a model</option>
-            <option value="llama3.2">Clinical Expert</option>
-            <option value="llama3">Medical Specialist</option>
-            <option value="phi3">General Practitioner</option>
-          </select>
-        </div>
-        
-        {/* Speak/Consult Button */}
-        <button 
-          onClick={handleSpeak} 
-          style={getButtonStyle()} 
-          disabled={speak || isGenerating || !prompt.trim()}
-        > 
-          {getButtonText()} 
-        </button>
-      </div>
-
       <ReactAudioPlayer
         src={audioSource}
         ref={audioPlayer}
@@ -549,6 +584,88 @@ function App() {
           />
         </Suspense>
       </Canvas>
+      
+      <div style={STYLES.container}>
+        <div style={STYLES.header}>
+          <div style={STYLES.avatar}>⚕️</div>
+          <h3 style={STYLES.headerText}>Virtual Medical Assistant</h3>
+          <div style={STYLES.statusBadge}>
+            {isGenerating ? 'Analyzing...' : speak ? 'Speaking...' : 'Ready'}
+          </div>
+        </div>
+        
+        <div style={STYLES.conversationContainer} ref={conversationContainerRef}>
+          {conversationHistory.length === 0 ? (
+            <div style={STYLES.messageAssistant}>
+              Hello, I'm your Virtual Medical Assistant. I'm here to help understand your symptoms and provide guidance. How can I help you today?
+            </div>
+          ) : (
+            conversationHistory.map((message, index) => (
+              <div 
+                key={index} 
+                style={message.role === 'user' ? STYLES.messageUser : STYLES.messageAssistant}
+              >
+                {message.content}
+              </div>
+            ))
+          )}
+          
+          {isGenerating && (
+            <div style={{...STYLES.messageAssistant, background: 'rgba(51, 65, 85, 0.5)'}}>
+              <div style={STYLES.loadingDots}>
+                <span style={{...STYLES.dot, animationDelay: '0s'}}></span>
+                <span style={{...STYLES.dot, animationDelay: '0.2s'}}></span>
+                <span style={{...STYLES.dot, animationDelay: '0.4s'}}></span>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        <div style={STYLES.responseArea}>
+          <div style={STYLES.inputContainer}>
+            <textarea 
+              rows={2}
+              style={STYLES.input} 
+              value={prompt} 
+              onChange={(e) => setPrompt(e.target.value)} 
+              placeholder="Describe your symptoms or ask a question..."
+              disabled={isGenerating || speak}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  if (!(speak || isGenerating || !prompt.trim())) {
+                    handleSpeak();
+                  }
+                }
+              }}
+            />
+            {renderSendButton()}
+          </div>
+        </div>
+        
+        <div style={STYLES.infoSection}>
+          This is a virtual medical consultation. For medical emergencies, please call 911 or go to your nearest emergency room.
+        </div>
+        
+        {/* Hidden controls for AI functionality - keep these for the backend functionality */}
+        <div style={STYLES.hiddenControls}>
+          <input 
+            type="checkbox" 
+            id="useAI" 
+            checked={useAI} 
+            onChange={(e) => setUseAI(e.target.checked)} 
+          />
+          
+          <select 
+            value={selectedModel} 
+            onChange={(e) => setSelectedModel(e.target.value)}
+          >
+            <option value="llama3.2">Clinical Expert</option>
+            <option value="llama3">Medical Specialist</option>
+            <option value="phi3">General Practitioner</option>
+          </select>
+        </div>
+      </div>
       
       <Loader dataInterpolation={(p) => `Loading... please wait`} />
     </div>
