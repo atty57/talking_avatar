@@ -498,6 +498,49 @@ function App() {
   // Toggle for showing advanced viseme controls
   const [showAdvancedVisemeControls, setShowAdvancedVisemeControls] = useState(false);
 
+  // STT state and logic
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef(null);
+
+  useEffect(() => {
+    // Setup recognition only once
+    if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) return;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognitionRef.current = new SpeechRecognition();
+    recognitionRef.current.lang = 'en-US';
+    recognitionRef.current.interimResults = false;
+    recognitionRef.current.maxAlternatives = 1;
+
+    recognitionRef.current.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      setPrompt(transcript);
+      setIsListening(false);
+      // Automatically send the message after speech is recognized
+      setTimeout(() => {
+        setPrompt(t => {
+          if (t && t.trim()) handleSpeak();
+          return t;
+        });
+      }, 100);
+    };
+    recognitionRef.current.onend = () => setIsListening(false);
+    recognitionRef.current.onerror = () => setIsListening(false);
+  }, []);
+
+  const startListening = () => {
+    if (recognitionRef.current && !isListening && !(isGenerating || speak)) {
+      setIsListening(true);
+      recognitionRef.current.start();
+    }
+  };
+
+  const stopListening = () => {
+    if (recognitionRef.current && isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    }
+  };
+
   // Scroll conversation to bottom whenever it changes
   useEffect(() => {
     if (conversationContainerRef.current) {
@@ -511,6 +554,13 @@ function App() {
     setAudioSource(null);
     setSpeak(false);
     setPlaying(false);
+    // Automatically start listening again after response
+    setTimeout(() => {
+      if (recognitionRef.current && !isListening && !(isGenerating || speak)) {
+        setIsListening(true);
+        recognitionRef.current.start();
+      }
+    }, 500);
   }
 
   // Player is ready
@@ -866,6 +916,33 @@ function App() {
                 }
               }}
             />
+            {/* Microphone button for STT */}
+            <button
+              onClick={isListening ? stopListening : startListening}
+              style={{
+                ...STYLES.sendButton,
+                right: '50px',
+                background: isListening ? 'rgba(14, 116, 144, 0.5)' : STYLES.sendButton.background
+              }}
+              disabled={isGenerating || speak}
+              aria-label={isListening ? 'Stop listening' : 'Start listening'}
+            >
+              {isListening ? (
+                // Simple solid circle with a white mic glyph (listening)
+                <svg style={STYLES.sendIcon} viewBox="0 0 24 24" fill="#0ea5e9">
+                  <circle cx="12" cy="12" r="10" fill="#0ea5e9"/>
+                  <path d="M12 7a2 2 0 0 1 2 2v4a2 2 0 0 1-4 0V9a2 2 0 0 1 2-2zm5 5a5 5 0 0 1-10 0" stroke="#fff" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+                  <rect x="11" y="15" width="2" height="3" rx="1" fill="#fff"/>
+                </svg>
+              ) : (
+                // Simple outlined circle with a blue mic glyph (idle)
+                <svg style={STYLES.sendIcon} viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="#0ea5e9" strokeWidth="2" fill="none"/>
+                  <path d="M12 7a2 2 0 0 1 2 2v4a2 2 0 0 1-4 0V9a2 2 0 0 1 2-2zm5 5a5 5 0 0 1-10 0" stroke="#0ea5e9" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+                  <rect x="11" y="15" width="2" height="3" rx="1" fill="#0ea5e9"/>
+                </svg>
+              )}
+            </button>
             {renderSendButton()}
           </div>
         </div>
