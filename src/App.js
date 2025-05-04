@@ -16,18 +16,18 @@ const _ = require('lodash');
 
 const host = 'http://localhost:3001'
 
-function Avatar({ avatar_url, speak, setSpeak, text, setAudioSource, playing }) {
+function Avatar({ avatar_url, speak, setSpeak, text, setAudioSource, playing, visemeSettings }) {
 
   let gltf = useGLTF(avatar_url);
   let morphTargetDictionaryBody = null;
   let morphTargetDictionaryLowerTeeth = null;
 
-  const [ 
-    bodyTexture, 
-    eyesTexture, 
-    teethTexture, 
-    bodySpecularTexture, 
-    bodyRoughnessTexture, 
+  const [
+    bodyTexture,
+    eyesTexture,
+    teethTexture,
+    bodySpecularTexture,
+    bodyRoughnessTexture,
     bodyNormalTexture,
     teethNormalTexture,
     // teethSpecularTexture,
@@ -38,7 +38,7 @@ function Avatar({ avatar_url, speak, setSpeak, text, setAudioSource, playing }) 
     hairAlphaTexture,
     hairNormalTexture,
     hairRoughnessTexture,
-    ] = useTexture([
+  ] = useTexture([
     "/images/body.webp",
     "/images/eyes.webp",
     "/images/teeth_diffuse.webp",
@@ -57,15 +57,15 @@ function Avatar({ avatar_url, speak, setSpeak, text, setAudioSource, playing }) 
   ]);
 
   _.each([
-    bodyTexture, 
-    eyesTexture, 
-    teethTexture, 
-    teethNormalTexture, 
-    bodySpecularTexture, 
-    bodyRoughnessTexture, 
-    bodyNormalTexture, 
-    tshirtDiffuseTexture, 
-    tshirtNormalTexture, 
+    bodyTexture,
+    eyesTexture,
+    teethTexture,
+    teethNormalTexture,
+    bodySpecularTexture,
+    bodyRoughnessTexture,
+    bodyNormalTexture,
+    tshirtDiffuseTexture,
+    tshirtNormalTexture,
     tshirtRoughnessTexture,
     hairAlphaTexture,
     hairNormalTexture,
@@ -80,9 +80,9 @@ function Avatar({ avatar_url, speak, setSpeak, text, setAudioSource, playing }) 
   teethNormalTexture.encoding = LinearEncoding;
   hairNormalTexture.encoding = LinearEncoding;
 
-  
+
   gltf.scene.traverse(node => {
-    if(node.type === 'Mesh' || node.type === 'LineSegments' || node.type === 'SkinnedMesh') {
+    if (node.type === 'Mesh' || node.type === 'LineSegments' || node.type === 'SkinnedMesh') {
       node.castShadow = true;
       node.receiveShadow = true;
       node.frustumCulled = false;
@@ -116,7 +116,7 @@ function Avatar({ avatar_url, speak, setSpeak, text, setAudioSource, playing }) 
       }
 
       if (node.name.includes("Brows")) {
-        node.material = new LineBasicMaterial({color: 0x000000});
+        node.material = new LineBasicMaterial({ color: 0x000000 });
         node.material.linewidth = 1;
         node.material.opacity = 0.5;
         node.material.transparent = true;
@@ -139,12 +139,12 @@ function Avatar({ avatar_url, speak, setSpeak, text, setAudioSource, playing }) 
         node.material.alphaMap = hairAlphaTexture;
         node.material.normalMap = hairNormalTexture;
         node.material.roughnessMap = hairRoughnessTexture;
-        
+
         node.material.transparent = true;
         node.material.depthWrite = false;
         node.material.side = 2;
         node.material.color.setHex(0x000000);
-        
+
         node.material.envMapIntensity = 0.3;
       }
 
@@ -172,23 +172,23 @@ function Avatar({ avatar_url, speak, setSpeak, text, setAudioSource, playing }) 
     if (speak === false)
       return;
 
-    makeSpeech(text)
-    .then(response => {
-      let {blendData, filename, generatedText} = response.data;
+    makeSpeech(text, visemeSettings)
+      .then(response => {
+        let { blendData, filename, generatedText } = response.data;
 
-      let newClips = [ 
-        createAnimation(blendData, morphTargetDictionaryBody, 'HG_Body'), 
-        createAnimation(blendData, morphTargetDictionaryLowerTeeth, 'HG_TeethLower') ];
+        let newClips = [
+          createAnimation(blendData, morphTargetDictionaryBody, 'HG_Body'),
+          createAnimation(blendData, morphTargetDictionaryLowerTeeth, 'HG_TeethLower')];
 
-      filename = host + filename;
-        
-      setClips(newClips);
-      setAudioSource(filename);
-    })
-    .catch(err => {
-      console.error(err);
-      setSpeak(false);
-    })
+        filename = host + filename;
+
+        setClips(newClips);
+        setAudioSource(filename);
+      })
+      .catch(err => {
+        console.error(err);
+        setSpeak(false);
+      })
   }, [speak]);
 
   let idleFbx = useFBX('/idle.fbx');
@@ -227,14 +227,14 @@ function Avatar({ avatar_url, speak, setSpeak, text, setAudioSource, playing }) 
   useEffect(() => {
     if (playing === false)
       return;
-    
+
     _.each(clips, clip => {
-        let clipAction = mixer.clipAction(clip);
-        clipAction.setLoop(THREE.LoopOnce);
-        clipAction.play();
+      let clipAction = mixer.clipAction(clip);
+      clipAction.setLoop(THREE.LoopOnce);
+      clipAction.play();
     });
   }, [playing]);
-  
+
   useFrame((state, delta) => {
     mixer.update(delta);
   });
@@ -246,12 +246,14 @@ function Avatar({ avatar_url, speak, setSpeak, text, setAudioSource, playing }) 
   );
 }
 
-function makeSpeech(text, useAI = false, prompt = "", model = null) {
-  return axios.post(host + '/talk', { 
+function makeSpeech(text, visemeSettings = {}, useAI = false, prompt = "", model = null) {
+  return axios.post(host + '/talk', {
     text,
     useAI,
     prompt: prompt || text,
-    model
+    model,
+    // Include viseme settings
+    ...visemeSettings
   });
 }
 
@@ -278,19 +280,19 @@ const STYLES = {
     borderTopLeftRadius: '12px',
     borderTopRightRadius: '12px'
   },
-avatar: {
-  width: '36px',
-  height: '36px',
-  borderRadius: '50%',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  background: 'white',
-  marginRight: '12px',
-  fontWeight: 'bold',
-  fontSize: '22px', // Slightly increased size for better visibility
-  color: 'rgba(14, 116, 144, 1)'
-},
+  avatar: {
+    width: '36px',
+    height: '36px',
+    borderRadius: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'white',
+    marginRight: '12px',
+    fontWeight: 'bold',
+    fontSize: '22px', // Slightly increased size for better visibility
+    color: 'rgba(14, 116, 144, 1)'
+  },
   headerText: {
     margin: 0,
     fontWeight: '600',
@@ -420,6 +422,43 @@ avatar: {
   },
   hiddenControls: {
     display: 'none'
+  },
+  visemeControls: {
+    padding: '10px 20px',
+    borderTop: '1px solid rgba(100, 116, 139, 0.2)',
+    fontSize: '12px',
+    color: '#fff',
+  },
+  visemeControlRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: '8px',
+  },
+  visemeLabel: {
+    flexBasis: '40%',
+  },
+  visemeInput: {
+    flexBasis: '55%',
+    background: 'rgba(51, 65, 85, 0.5)',
+    border: 'none',
+    borderRadius: '4px',
+    color: 'white',
+    padding: '4px 8px'
+  },
+  checkbox: {
+    margin: '0 0 0 auto',
+  },
+  advancedToggle: {
+    color: 'rgba(14, 116, 144, 0.9)',
+    background: 'none',
+    border: 'none',
+    textDecoration: 'underline',
+    cursor: 'pointer',
+    fontSize: '12px',
+    display: 'block',
+    margin: '8px auto',
+    padding: '4px'
   }
 };
 
@@ -430,16 +469,34 @@ function App() {
   const [text, setText] = useState("Hello, I'm a Virtual Dr. , your medical assistant. How can I help you today?");
   const [audioSource, setAudioSource] = useState(null);
   const [playing, setPlaying] = useState(false);
-  
+
   // State variables for LLM integration
   const [useAI, setUseAI] = useState(true); // Set to true by default for medical assistant
   const [prompt, setPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedModel, setSelectedModel] = useState("llama3.2");
-  
+
   // Conversation history for medical context
   const [conversationHistory, setConversationHistory] = useState([]);
   const conversationContainerRef = useRef(null);
+
+  // State for viseme fine-tuning
+  const [visemeSettings, setVisemeSettings] = useState({
+    visemeIntensity: 1,
+    visemeSmoothing: true,
+    addIdleVisemes: true,
+    visemeEmphasis: {
+      "mouthOpen": 1.3,
+      "jawOpen": 1.3,
+      "mouthSmileLeft": 1.2,
+      "mouthSmileRight": 1.2,
+      "eyeSquintLeft": 0.8,
+      "eyeSquintRight": 0.8
+    }
+  });
+
+  // Toggle for showing advanced viseme controls
+  const [showAdvancedVisemeControls, setShowAdvancedVisemeControls] = useState(false);
 
   // Scroll conversation to bottom whenever it changes
   useEffect(() => {
@@ -471,7 +528,7 @@ function App() {
         content: prompt
       }]);
     }
-    
+
     if (useAI) {
       setIsGenerating(true);
     } else {
@@ -484,65 +541,235 @@ function App() {
     if (!isGenerating) return;
     console.log("Generating AI response with:", { prompt: prompt || text, model: selectedModel });
 
-    axios.post(host + '/talk', { 
+    axios.post(host + '/talk', {
       text,
       useAI: true,
       prompt: prompt || text,
-      model: selectedModel
+      model: selectedModel,
+      ...visemeSettings
     })
-    .then(response => {
-      setIsGenerating(false);
-      
-      if (response.data.generatedText) {
-        // Update the text with the AI-generated response
-        setText(response.data.generatedText);
-        
-        // Add AI response to conversation history
-        setConversationHistory(prev => [...prev, {
-          role: 'assistant',
-          content: response.data.generatedText
-        }]);
-        
-        // Now trigger the speak action with the generated text
-        setSpeak(true);
-        
-        // Clear the prompt field after generating
-        setPrompt("");
-      }
-    })
-    .catch(err => {
-      console.error("Error generating response:", err);
-      setIsGenerating(false);
-    });
+      .then(response => {
+        setIsGenerating(false);
+
+        if (response.data.generatedText) {
+          // Update the text with the AI-generated response
+          setText(response.data.generatedText);
+
+          // Add AI response to conversation history
+          setConversationHistory(prev => [...prev, {
+            role: 'assistant',
+            content: response.data.generatedText
+          }]);
+
+          // Now trigger the speak action with the generated text
+          setSpeak(true);
+
+          // Clear the prompt field after generating
+          setPrompt("");
+        }
+      })
+      .catch(err => {
+        console.error("Error generating response:", err);
+        setIsGenerating(false);
+      });
   }, [isGenerating]);
+
+  // Handle changes to viseme intensity
+  const handleVisemeIntensityChange = (e) => {
+    setVisemeSettings({
+      ...visemeSettings,
+      visemeIntensity: parseFloat(e.target.value)
+    });
+  };
+
+  // Handle toggling of viseme smoothing
+  const handleVisemeSmoothingChange = (e) => {
+    setVisemeSettings({
+      ...visemeSettings,
+      visemeSmoothing: e.target.checked
+    });
+  };
+
+  // Handle toggling of idle visemes
+  const handleIdleVisemesChange = (e) => {
+    setVisemeSettings({
+      ...visemeSettings,
+      addIdleVisemes: e.target.checked
+    });
+  };
+
+  // Handle changes to specific viseme emphasis values
+  const handleVisemeEmphasisChange = (key, value) => {
+    setVisemeSettings({
+      ...visemeSettings,
+      visemeEmphasis: {
+        ...visemeSettings.visemeEmphasis,
+        [key]: parseFloat(value)
+      }
+    });
+  };
 
   // Render the send button with appropriate state
   const renderSendButton = () => {
     const isDisabled = speak || isGenerating || !prompt.trim();
     const buttonStyle = isDisabled ? STYLES.sendButtonDisabled : STYLES.sendButton;
-    
+
     if (isGenerating) {
       return (
         <div style={buttonStyle}>
           <div style={STYLES.loadingDots}>
-            <span style={{...STYLES.dot, animationDelay: '0s'}}></span>
-            <span style={{...STYLES.dot, animationDelay: '0.2s'}}></span>
-            <span style={{...STYLES.dot, animationDelay: '0.4s'}}></span>
+            <span style={{ ...STYLES.dot, animationDelay: '0s' }}></span>
+            <span style={{ ...STYLES.dot, animationDelay: '0.2s' }}></span>
+            <span style={{ ...STYLES.dot, animationDelay: '0.4s' }}></span>
           </div>
         </div>
       );
     }
-    
+
     return (
-      <button 
-        onClick={handleSpeak} 
-        style={buttonStyle} 
+      <button
+        onClick={handleSpeak}
+        style={buttonStyle}
         disabled={isDisabled}
       >
         <svg style={STYLES.sendIcon} viewBox="0 0 24 24">
           <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
         </svg>
       </button>
+    );
+  };
+
+  // Render the viseme controls section
+  const renderVisemeControls = () => {
+    return (
+      <div style={STYLES.visemeControls}>
+        <h4 style={{ margin: '0 0 10px 0' }}>Expression Controls</h4>
+
+        <div style={STYLES.visemeControlRow}>
+          <label style={STYLES.visemeLabel}>Intensity:</label>
+          <input
+            type="range"
+            min="0.5"
+            max="2.0"
+            step="0.1"
+            value={visemeSettings.visemeIntensity}
+            onChange={handleVisemeIntensityChange}
+            style={STYLES.visemeInput}
+          />
+          <span>{visemeSettings.visemeIntensity.toFixed(1)}</span>
+        </div>
+
+        <div style={STYLES.visemeControlRow}>
+          <label style={STYLES.visemeLabel}>Smooth Transitions:</label>
+          <input
+            type="checkbox"
+            checked={visemeSettings.visemeSmoothing}
+            onChange={handleVisemeSmoothingChange}
+            style={STYLES.checkbox}
+          />
+        </div>
+
+        <div style={STYLES.visemeControlRow}>
+          <label style={STYLES.visemeLabel}>Idle Expressions:</label>
+          <input
+            type="checkbox"
+            checked={visemeSettings.addIdleVisemes}
+            onChange={handleIdleVisemesChange}
+            style={STYLES.checkbox}
+          />
+        </div>
+
+        <button
+          style={STYLES.advancedToggle}
+          onClick={() => setShowAdvancedVisemeControls(!showAdvancedVisemeControls)}
+        >
+          {showAdvancedVisemeControls ? "Hide Advanced Controls" : "Show Advanced Controls"}
+        </button>
+
+        {showAdvancedVisemeControls && (
+          <div>
+            <div style={STYLES.visemeControlRow}>
+              <label style={STYLES.visemeLabel}>Mouth Open:</label>
+              <input
+                type="range"
+                min="0.5"
+                max="2.0"
+                step="0.1"
+                value={visemeSettings.visemeEmphasis.mouthOpen}
+                onChange={(e) => handleVisemeEmphasisChange("mouthOpen", e.target.value)}
+                style={STYLES.visemeInput}
+              />
+              <span>{visemeSettings.visemeEmphasis.mouthOpen.toFixed(1)}</span>
+            </div>
+
+            <div style={STYLES.visemeControlRow}>
+              <label style={STYLES.visemeLabel}>Jaw Open:</label>
+              <input
+                type="range"
+                min="0.5"
+                max="2.0"
+                step="0.1"
+                value={visemeSettings.visemeEmphasis.jawOpen}
+                onChange={(e) => handleVisemeEmphasisChange("jawOpen", e.target.value)}
+                style={STYLES.visemeInput}
+              />
+              <span>{visemeSettings.visemeEmphasis.jawOpen.toFixed(1)}</span>
+            </div>
+
+            <div style={STYLES.visemeControlRow}>
+              <label style={STYLES.visemeLabel}>Smile Left:</label>
+              <input
+                type="range"
+                min="0.5"
+                max="2.0"
+                step="0.1"
+                value={visemeSettings.visemeEmphasis.mouthSmileLeft}
+                onChange={(e) => handleVisemeEmphasisChange("mouthSmileLeft", e.target.value)}
+                style={STYLES.visemeInput}
+              />
+              <span>{visemeSettings.visemeEmphasis.mouthSmileLeft.toFixed(1)}</span>
+            </div>
+
+            <div style={STYLES.visemeControlRow}>
+              <label style={STYLES.visemeLabel}>Smile Right:</label>
+              <input
+                type="range"
+                min="0.5"
+                max="2.0"
+                step="0.1"
+                value={visemeSettings.visemeEmphasis.mouthSmileRight}
+                onChange={(e) => handleVisemeEmphasisChange("mouthSmileRight", e.target.value)}
+                style={STYLES.visemeInput}
+              />
+              <span>{visemeSettings.visemeEmphasis.mouthSmileRight.toFixed(1)}</span>
+            </div>
+
+            <div style={STYLES.visemeControlRow}>
+              <label style={STYLES.visemeLabel}>Eye Squint:</label>
+              <input
+                type="range"
+                min="0.5"
+                max="2.0"
+                step="0.1"
+                value={visemeSettings.visemeEmphasis.eyeSquintLeft || 0.8}
+                onChange={(e) => {
+                  const value = parseFloat(e.target.value);
+                  setVisemeSettings({
+                    ...visemeSettings,
+                    visemeEmphasis: {
+                      ...visemeSettings.visemeEmphasis,
+                      eyeSquintLeft: value,
+                      eyeSquintRight: value
+                    }
+                  });
+                }}
+                style={STYLES.visemeInput}
+              />
+              <span>{(visemeSettings.visemeEmphasis.eyeSquintLeft || 0.8).toFixed(1)}</span>
+            </div>
+          </div>
+        )}
+      </div>
     );
   };
 
@@ -554,12 +781,12 @@ function App() {
         onEnded={playerEnded}
         onCanPlayThrough={playerReady}
       />
-      
-      <Canvas dpr={2} onCreated={(ctx) => {
-          ctx.gl.physicallyCorrectLights = false;
-        }}>
 
-        <OrthographicCamera 
+      <Canvas dpr={2} onCreated={(ctx) => {
+        ctx.gl.physicallyCorrectLights = false;
+      }}>
+
+        <OrthographicCamera
           makeDefault
           zoom={2000}
           position={[0, 1.65, 1]}
@@ -574,17 +801,18 @@ function App() {
         </Suspense>
 
         <Suspense fallback={null}>
-          <Avatar 
-            avatar_url="/model.glb" 
-            speak={speak} 
+          <Avatar
+            avatar_url="/model.glb"
+            speak={speak}
             setSpeak={setSpeak}
             text={text}
             setAudioSource={setAudioSource}
             playing={playing}
+            visemeSettings={visemeSettings}
           />
         </Suspense>
       </Canvas>
-      
+
       <div style={STYLES.container}>
         <div style={STYLES.header}>
           <div style={STYLES.avatar}>⚕️</div>
@@ -593,7 +821,7 @@ function App() {
             {isGenerating ? 'Analyzing...' : speak ? 'Speaking...' : 'Ready'}
           </div>
         </div>
-        
+
         <div style={STYLES.conversationContainer} ref={conversationContainerRef}>
           {conversationHistory.length === 0 ? (
             <div style={STYLES.messageAssistant}>
@@ -601,33 +829,32 @@ function App() {
             </div>
           ) : (
             conversationHistory.map((message, index) => (
-              <div 
-                key={index} 
+              <div
+                key={index}
                 style={message.role === 'user' ? STYLES.messageUser : STYLES.messageAssistant}
               >
                 {message.content}
               </div>
             ))
           )}
-          
+
           {isGenerating && (
-            <div style={{...STYLES.messageAssistant, background: 'rgba(51, 65, 85, 0.5)'}}>
+            <div style={{ ...STYLES.messageAssistant, background: 'rgba(51, 65, 85, 0.5)' }}>
               <div style={STYLES.loadingDots}>
-                <span style={{...STYLES.dot, animationDelay: '0s'}}></span>
-                <span style={{...STYLES.dot, animationDelay: '0.2s'}}></span>
-                <span style={{...STYLES.dot, animationDelay: '0.4s'}}></span>
+                <span style={{ ...STYLES.dot, animationDelay: '0s' }}></span>
+                <span style={{ ...STYLES.dot, animationDelay: '0.2s' }}></span>
+                <span style={{ ...STYLES.dot, animationDelay: '0.4s' }}></span>
               </div>
             </div>
           )}
         </div>
-        
         <div style={STYLES.responseArea}>
           <div style={STYLES.inputContainer}>
-            <textarea 
+            <textarea
               rows={2}
-              style={STYLES.input} 
-              value={prompt} 
-              onChange={(e) => setPrompt(e.target.value)} 
+              style={STYLES.input}
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
               placeholder="Describe your symptoms or ask a question..."
               disabled={isGenerating || speak}
               onKeyDown={(e) => {
@@ -642,22 +869,25 @@ function App() {
             {renderSendButton()}
           </div>
         </div>
-        
+
+        {/* Viseme Controls Section */}
+        {renderVisemeControls()}
+
         <div style={STYLES.infoSection}>
           This is a virtual medical consultation. For medical emergencies, please call 911 or go to your nearest emergency room.
         </div>
-        
+
         {/* Hidden controls for AI functionality - keep these for the backend functionality */}
         <div style={STYLES.hiddenControls}>
-          <input 
-            type="checkbox" 
-            id="useAI" 
-            checked={useAI} 
-            onChange={(e) => setUseAI(e.target.checked)} 
+          <input
+            type="checkbox"
+            id="useAI"
+            checked={useAI}
+            onChange={(e) => setUseAI(e.target.checked)}
           />
-          
-          <select 
-            value={selectedModel} 
+
+          <select
+            value={selectedModel}
             onChange={(e) => setSelectedModel(e.target.value)}
           >
             <option value="llama3.2">Clinical Expert</option>
@@ -666,7 +896,7 @@ function App() {
           </select>
         </div>
       </div>
-      
+
       <Loader dataInterpolation={(p) => `Loading... please wait`} />
     </div>
   );
@@ -675,7 +905,7 @@ function App() {
 function Bg() {
   const texture = useTexture('/images/bg.webp');
 
-  return(
+  return (
     <mesh position={[0.02, 1.56, -2]} scale={[1, 1, 1]}>
       <planeGeometry />
       <meshBasicMaterial map={texture} />
