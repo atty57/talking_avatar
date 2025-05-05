@@ -2,7 +2,7 @@
 
 This is a React-based 3D talking avatar application that uses Three.js and React Three Fiber to render a realistic 3D character that responds to text input with synchronized speech and facial animations.
 
-https://github.com/yourusername/talking_avatar/public/DEMO/Screen Recording 2025-05-04 214010.mp4
+https://github.com/atty57/talking_avatar/public/DEMO/Screen Recording 2025-05-04 214010.mp4
 
 public/DEMO/Screen Recording 2025-05-04 214010.mp4
 ## Features
