@@ -4,7 +4,6 @@ This is a React-based 3D talking avatar application that uses Three.js and React
 
 https://github.com/atty57/talking_avatar/public/DEMO/Demo.mp4
 
-public/DEMO/Screen Recording 2025-05-04 214010.mp4
 ## Features
 
 - 3D avatar with realistic facial animations
