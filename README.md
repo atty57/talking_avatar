@@ -2,9 +2,16 @@
 
 This is a React-based 3D talking avatar application that uses Three.js and React Three Fiber to render a realistic 3D character that responds to text input with synchronized speech and facial animations.
 
-https://github.com/atty57/talking_avatar/public/DEMO/Screen Recording 2025-05-04 214010.mp4
+## Demo Video
 
-public/DEMO/Screen Recording 2025-05-04 214010.mp4
+![Demo Video](./public/DEMO/Demo.mp4)
+
+<!-- Alternative format using HTML video tag for better GitHub compatibility -->
+<video width="640" height="360" controls>
+  <source src="public/DEMO/Demo.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
 ## Features
 
 - 3D avatar with realistic facial animations
@@ -54,6 +61,7 @@ The application will be available at `http://localhost:3000`.
 - `/public` - Static assets and index.html
   - `/images` - Textures and image assets for the 3D model
   - `/speech-*.mp3` - Generated speech files (created during runtime)
+  - `/DEMO` - Demo videos and other promotional content
 - `/src` - Source code
   - `App.js` - Main application component with UI and 3D scene setup
   - `converter.js` - Utility for converting blend shape data to animations
@@ -93,4 +101,3 @@ API endpoints used:
 - If the avatar is not visible, check browser console for Three.js errors
 - If speech is not playing, verify that audio is enabled in your browser
 - For network issues, check that the backend server is running and accessible
-
