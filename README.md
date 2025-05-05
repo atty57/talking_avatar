@@ -4,7 +4,7 @@ This is a React-based 3D talking avatar application that uses Three.js and React
 
 ## Demo Video
 
-https://user-images.githubusercontent.com/atty57/talking_avatar/public/DEMO/Demo.mp4
+![Demo Video](./public/DEMO/Demo.mp4)
 
 <!-- Alternative format using HTML video tag for better GitHub compatibility -->
 <video width="640" height="360" controls>
