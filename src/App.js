@@ -16,7 +16,7 @@ const _ = require('lodash');
 
 const host = 'http://localhost:3001'
 
-function Avatar({ avatar_url, speak, setSpeak, text, setAudioSource, playing, visemeSettings }) {
+function Avatar({ avatar_url, speak, setSpeak, text, setAudioSource, playing, visemeSettings, voiceParams }) {
 
   let gltf = useGLTF(avatar_url);
   let morphTargetDictionaryBody = null;
@@ -172,7 +172,7 @@ function Avatar({ avatar_url, speak, setSpeak, text, setAudioSource, playing, vi
     if (speak === false)
       return;
 
-    makeSpeech(text, visemeSettings)
+    makeSpeech(text, visemeSettings, false, "", null, voiceParams)
       .then(response => {
         let { blendData, filename, generatedText } = response.data;
 
@@ -246,12 +246,15 @@ function Avatar({ avatar_url, speak, setSpeak, text, setAudioSource, playing, vi
   );
 }
 
-function makeSpeech(text, visemeSettings = {}, useAI = false, prompt = "", model = null) {
+function makeSpeech(text, visemeSettings = {}, useAI = false, prompt = "", model = null, voiceParams = {}) {
   return axios.post(host + '/talk', {
     text,
     useAI,
     prompt: prompt || text,
     model,
+    // Include voice parameters
+    voiceName: voiceParams.voiceName,
+    voiceStyle: voiceParams.voiceStyle,
     // Include viseme settings
     ...visemeSettings
   });
@@ -459,6 +462,30 @@ const STYLES = {
     display: 'block',
     margin: '8px auto',
     padding: '4px'
+  },
+  voiceControls: {
+    padding: '10px 20px',
+    borderTop: '1px solid rgba(100, 116, 139, 0.2)',
+    fontSize: '12px',
+    color: '#fff',
+  },
+  voiceControlRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: '8px',
+  },
+  voiceLabel: {
+    flexBasis: '40%',
+  },
+  voiceSelect: {
+    flexBasis: '55%',
+    background: 'rgba(51, 65, 85, 0.5)',
+    border: 'none',
+    borderRadius: '4px',
+    color: 'white',
+    padding: '6px 8px',
+    fontSize: '12px'
   }
 };
 
@@ -494,6 +521,32 @@ function App() {
       "eyeSquintRight": 0.8
     }
   });
+
+  // Voice selection state
+  const [voiceParams, setVoiceParams] = useState({
+    voiceName: "en-US-AriaNeural",
+    voiceStyle: "empathetic"
+  });
+
+  // Available voices (all female neural voices)
+  const availableVoices = [
+    { id: "en-US-AriaNeural", name: "Aria (Versatile)" },
+    { id: "en-US-JennyNeural", name: "Jenny (Conversational)" },
+    { id: "en-US-SaraNeural", name: "Sara (Professional)" },
+    { id: "en-US-ElizabethNeural", name: "Elizabeth (Warm)" },
+    { id: "en-US-NancyNeural", name: "Nancy (Friendly)" },
+    { id: "en-US-MichelleNeural", name: "Michelle (Calm)" }
+  ];
+
+  // Available speaking styles
+  const availableStyles = [
+    { id: "empathetic", name: "Empathetic" },
+    { id: "cheerful", name: "Cheerful" },
+    { id: "friendly", name: "Friendly" },
+    { id: "hopeful", name: "Hopeful" },
+    { id: "sad", name: "Sad" },
+    { id: "excited", name: "Excited" }
+  ];
 
   // Toggle for showing advanced viseme controls
   const [showAdvancedVisemeControls, setShowAdvancedVisemeControls] = useState(false);
@@ -596,6 +649,8 @@ function App() {
       useAI: true,
       prompt: prompt || text,
       model: selectedModel,
+      voiceName: voiceParams.voiceName,
+      voiceStyle: voiceParams.voiceStyle,
       ...visemeSettings
     })
       .then(response => {
@@ -657,6 +712,43 @@ function App() {
         [key]: parseFloat(value)
       }
     });
+  };
+
+  // Render the voice controls section
+  const renderVoiceControls = () => {
+    return (
+      <div style={STYLES.voiceControls}>
+        <h4 style={{ margin: '0 0 10px 0' }}>Voice Settings</h4>
+        
+        <div style={STYLES.voiceControlRow}>
+          <label style={STYLES.voiceLabel}>Voice:</label>
+          <select 
+            value={voiceParams.voiceName} 
+            onChange={(e) => setVoiceParams({...voiceParams, voiceName: e.target.value})}
+            style={STYLES.voiceSelect}
+            disabled={isGenerating || speak}
+          >
+            {availableVoices.map(voice => (
+              <option key={voice.id} value={voice.id}>{voice.name}</option>
+            ))}
+          </select>
+        </div>
+        
+        <div style={STYLES.voiceControlRow}>
+          <label style={STYLES.voiceLabel}>Speaking Style:</label>
+          <select 
+            value={voiceParams.voiceStyle} 
+            onChange={(e) => setVoiceParams({...voiceParams, voiceStyle: e.target.value})}
+            style={STYLES.voiceSelect}
+            disabled={isGenerating || speak}
+          >
+            {availableStyles.map(style => (
+              <option key={style.id} value={style.id}>{style.name}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+    );
   };
 
   // Render the send button with appropriate state
@@ -859,6 +951,7 @@ function App() {
             setAudioSource={setAudioSource}
             playing={playing}
             visemeSettings={visemeSettings}
+            voiceParams={voiceParams}
           />
         </Suspense>
       </Canvas>
@@ -946,6 +1039,9 @@ function App() {
             {renderSendButton()}
           </div>
         </div>
+
+        {/* Voice Controls Section */}
+        {renderVoiceControls()}
 
         {/* Viseme Controls Section */}
         {renderVisemeControls()}
