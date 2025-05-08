@@ -501,7 +501,7 @@ function App() {
   const [useAI, setUseAI] = useState(true); // Set to true by default for medical assistant
   const [prompt, setPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [selectedModel, setSelectedModel] = useState("llama3.2");
+  const [selectedModel, setSelectedModel] = useState("llama3");
 
   // Conversation history for medical context
   const [conversationHistory, setConversationHistory] = useState([]);
