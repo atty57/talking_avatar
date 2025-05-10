@@ -501,7 +501,7 @@ function App() {
   const [useAI, setUseAI] = useState(true); // Set to true by default for medical assistant
   const [prompt, setPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [selectedModel, setSelectedModel] = useState("llama3");
+  const [selectedModel, setSelectedModel] = useState("gpt-3.5-turbo");
 
   // Conversation history for medical context
   const [conversationHistory, setConversationHistory] = useState([]);
@@ -554,6 +554,19 @@ function App() {
   // STT state and logic
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef(null);
+
+  // Add username state
+  const [username, setUsername] = useState("");
+  const [awaitingName, setAwaitingName] = useState(true);
+
+  // On first load, set initial conversation with Dr. Ava asking for the name
+  useEffect(() => {
+    setConversationHistory([
+      { role: 'assistant', content: "Hello! I'm Dr. Ava, your virtual medical assistant. What's your name?" }
+    ]);
+    setAwaitingName(true);
+    setUsername("");
+  }, []);
 
   useEffect(() => {
     // Setup recognition only once
@@ -622,61 +635,100 @@ function App() {
     setPlaying(true);
   }
 
-  // Handle the speak button click - fixed to prevent double API calls
+  // Update handleSpeak to handle name collection
   const handleSpeak = () => {
-    // Add user input to conversation history
     if (prompt) {
-      setConversationHistory([...conversationHistory, {
-        role: 'user',
-        content: prompt
-      }]);
+      if (awaitingName) {
+        // First user message is their name
+        const name = prompt.trim();
+        setUsername(name);
+        setAwaitingName(false);
+        const greeting = `Nice to meet you, ${name}! How can I help you today?`;
+        setConversationHistory(prev => ([
+          ...prev,
+          { role: 'user', content: name },
+          { role: 'assistant', content: greeting }
+        ]));
+        setText(greeting);      // Set the greeting as the text to be spoken
+        setSpeak(true);         // Trigger the avatar to speak
+        setPrompt("");
+        return;
+      } else {
+        setConversationHistory([...conversationHistory, {
+          role: 'user',
+          content: prompt
+        }]);
+      }
     }
-
-    if (useAI) {
+    if (useAI && !awaitingName) {
       setIsGenerating(true);
-    } else {
+    } else if (!awaitingName) {
       setSpeak(true);
     }
   }
 
-  // Effect to handle LLM text generation
+  // Update askGpt35 to send username if available
+  async function askGpt35(question, history, username, model) {
+    try {
+      const response = await axios.post(host + '/ask_gpt', { question, history, username, model });
+      return response.data.answer;
+    } catch (err) {
+      console.error('Error calling /ask_gpt:', err);
+      throw err;
+    }
+  }
+
+  // Update useEffect to pass username if available
   useEffect(() => {
     if (!isGenerating) return;
-    console.log("Generating AI response with:", { prompt: prompt || text, model: selectedModel });
+    if (awaitingName) return;
+    console.log("Generating AI response with:", { prompt: prompt || text, model: selectedModel, username });
 
-    axios.post(host + '/talk', {
-      text,
-      useAI: true,
-      prompt: prompt || text,
-      model: selectedModel,
-      voiceName: voiceParams.voiceName,
-      voiceStyle: voiceParams.voiceStyle,
-      ...visemeSettings
-    })
-      .then(response => {
-        setIsGenerating(false);
-
-        if (response.data.generatedText) {
-          // Update the text with the AI-generated response
-          setText(response.data.generatedText);
-
-          // Add AI response to conversation history
-          setConversationHistory(prev => [...prev, {
-            role: 'assistant',
-            content: response.data.generatedText
-          }]);
-
-          // Now trigger the speak action with the generated text
-          setSpeak(true);
-
-          // Clear the prompt field after generating
-          setPrompt("");
-        }
+    if (selectedModel.startsWith('gpt-')) {
+      askGpt35(prompt || text, conversationHistory, username, selectedModel)
+        .then(answer => {
+          setIsGenerating(false);
+          if (answer) {
+            setText(answer);
+            setConversationHistory(prev => [...prev, {
+              role: 'assistant',
+              content: answer
+            }]);
+            setSpeak(true);
+            setPrompt("");
+          }
+        })
+        .catch(err => {
+          setIsGenerating(false);
+        });
+    } else {
+      // Use existing /talk endpoint for other models
+      axios.post(host + '/talk', {
+        text,
+        useAI: true,
+        prompt: prompt || text,
+        model: selectedModel,
+        voiceName: voiceParams.voiceName,
+        voiceStyle: voiceParams.voiceStyle,
+        ...visemeSettings
       })
-      .catch(err => {
-        console.error("Error generating response:", err);
-        setIsGenerating(false);
-      });
+        .then(response => {
+          setIsGenerating(false);
+          if (response.data.generatedText) {
+            setText(response.data.generatedText);
+            setConversationHistory(prev => [...prev, {
+              role: 'assistant',
+              content: response.data.generatedText
+            }]);
+            setSpeak(true);
+            setPrompt("");
+          }
+        })
+        .catch(err => {
+          console.error("Error generating response:", err);
+          setIsGenerating(false);
+        });
+    }
   }, [isGenerating]);
 
   // Handle changes to viseme intensity
@@ -1050,22 +1102,22 @@ function App() {
           This is a virtual medical consultation. For medical emergencies, please call 911 or go to your nearest emergency room.
         </div>
 
-        {/* Hidden controls for AI functionality - keep these for the backend functionality */}
-        <div style={STYLES.hiddenControls}>
-          <input
-            type="checkbox"
-            id="useAI"
-            checked={useAI}
-            onChange={(e) => setUseAI(e.target.checked)}
-          />
-
+        {/* Move the model selector out of hiddenControls and make it visible above the chat input */}
+        <div style={{ padding: '10px 20px', borderTop: '1px solid rgba(100, 116, 139, 0.2)', fontSize: '12px', color: '#fff' }}>
+          <label htmlFor="model-select" style={{ marginRight: 8 }}>AI Model:</label>
           <select
+            id="model-select"
             value={selectedModel}
             onChange={(e) => setSelectedModel(e.target.value)}
+            style={{ background: 'rgba(51, 65, 85, 0.5)', border: 'none', borderRadius: '4px', color: 'white', padding: '6px 8px', fontSize: '12px' }}
+            disabled={isGenerating || speak}
           >
-            <option value="llama3.2">Clinical Expert</option>
-            <option value="llama3">Medical Specialist</option>
-            <option value="phi3">General Practitioner</option>
+            <option value="llama3.2">Clinical Expert (Llama3.2)</option>
+            <option value="llama3">Medical Specialist (Llama3)</option>
+            <option value="phi3">General Practitioner (Phi3)</option>
+            <option value="gpt-3.5-turbo">OpenAI GPT-3.5 Turbo</option>
+            <option value="gpt-4">OpenAI GPT-4</option>
+            <option value="gpt-4o">OpenAI GPT-4o</option>
           </select>
         </div>
       </div>
