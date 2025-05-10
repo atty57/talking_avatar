@@ -528,25 +528,34 @@ function App() {
     voiceStyle: "empathetic"
   });
 
-  // Available voices (all female neural voices)
-  const availableVoices = [
-    { id: "en-US-AriaNeural", name: "Aria (Versatile)" },
-    { id: "en-US-JennyNeural", name: "Jenny (Conversational)" },
-    { id: "en-US-SaraNeural", name: "Sara (Professional)" },
-    { id: "en-US-ElizabethNeural", name: "Elizabeth (Warm)" },
-    { id: "en-US-NancyNeural", name: "Nancy (Friendly)" },
-    { id: "en-US-MichelleNeural", name: "Michelle (Calm)" }
-  ];
+  // Add state for dynamic voices and styles
+  const [voices, setVoices] = useState([]);
+  const [availableStyles, setAvailableStyles] = useState([]);
 
-  // Available speaking styles
-  const availableStyles = [
-    { id: "empathetic", name: "Empathetic" },
-    { id: "cheerful", name: "Cheerful" },
-    { id: "friendly", name: "Friendly" },
-    { id: "hopeful", name: "Hopeful" },
-    { id: "sad", name: "Sad" },
-    { id: "excited", name: "Excited" }
-  ];
+  // Fetch voices from backend on mount
+  useEffect(() => {
+    axios.get(host + '/voices')
+      .then(res => {
+        setVoices(res.data.voices);
+        // Set default styles for the initial voice
+        const defaultVoice = res.data.voices.find(v => v.name === voiceParams.voiceName) || res.data.voices[0];
+        setVoiceParams(vp => ({ ...vp, voiceName: defaultVoice.name }));
+        setAvailableStyles(defaultVoice.styles || []);
+      })
+      .catch(err => {
+        console.error('Failed to fetch voices:', err);
+      });
+  }, []);
+
+  // Update available styles when voice changes
+  useEffect(() => {
+    const selected = voices.find(v => v.name === voiceParams.voiceName);
+    setAvailableStyles(selected && selected.styles.length > 0 ? selected.styles : []);
+    // If the current style is not in the new styles, reset it
+    if (selected && (!selected.styles.includes(voiceParams.voiceStyle))) {
+      setVoiceParams(vp => ({ ...vp, voiceStyle: selected.styles[0] || '' }));
+    }
+  }, [voiceParams.voiceName, voices]);
 
   // Toggle for showing advanced viseme controls
   const [showAdvancedVisemeControls, setShowAdvancedVisemeControls] = useState(false);
@@ -775,32 +784,36 @@ function App() {
     return (
       <div style={STYLES.voiceControls}>
         <h4 style={{ margin: '0 0 10px 0' }}>Voice Settings</h4>
-        
         <div style={STYLES.voiceControlRow}>
           <label style={STYLES.voiceLabel}>Voice:</label>
-          <select 
-            value={voiceParams.voiceName} 
-            onChange={(e) => setVoiceParams({...voiceParams, voiceName: e.target.value})}
+          <select
+            value={voiceParams.voiceName}
+            onChange={e => setVoiceParams({ ...voiceParams, voiceName: e.target.value })}
             style={STYLES.voiceSelect}
             disabled={isGenerating || speak}
           >
-            {availableVoices.map(voice => (
-              <option key={voice.id} value={voice.id}>{voice.name}</option>
+            {voices.map(voice => (
+              <option key={voice.name} value={voice.name}>
+                {voice.displayName} - {voice.language}
+              </option>
             ))}
           </select>
         </div>
-        
         <div style={STYLES.voiceControlRow}>
           <label style={STYLES.voiceLabel}>Speaking Style:</label>
-          <select 
-            value={voiceParams.voiceStyle} 
-            onChange={(e) => setVoiceParams({...voiceParams, voiceStyle: e.target.value})}
+          <select
+            value={voiceParams.voiceStyle}
+            onChange={e => setVoiceParams({ ...voiceParams, voiceStyle: e.target.value })}
             style={STYLES.voiceSelect}
-            disabled={isGenerating || speak}
+            disabled={isGenerating || speak || availableStyles.length === 0}
           >
-            {availableStyles.map(style => (
-              <option key={style.id} value={style.id}>{style.name}</option>
-            ))}
+            {availableStyles.length > 0 ? (
+              availableStyles.map(style => (
+                <option key={style} value={style}>{style.charAt(0).toUpperCase() + style.slice(1)}</option>
+              ))
+            ) : (
+              <option value="">(No style)</option>
+            )}
           </select>
         </div>
       </div>
