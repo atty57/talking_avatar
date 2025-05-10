@@ -559,6 +559,10 @@ function App() {
   const [username, setUsername] = useState("");
   const [awaitingName, setAwaitingName] = useState(true);
 
+  // Add state for temperature and max tokens
+  const [gptTemperature, setGptTemperature] = useState(0.7);
+  const [gptMaxTokens, setGptMaxTokens] = useState(256);
+
   // On first load, set initial conversation with Dr. Ava asking for the name
   useEffect(() => {
     setConversationHistory([
@@ -667,10 +671,10 @@ function App() {
     }
   }
 
-  // Update askGpt35 to send username if available
-  async function askGpt35(question, history, username, model) {
+  // Pass temperature and max tokens to askGpt35 and backend
+  async function askGpt35(question, history, username, model, temperature, max_tokens) {
     try {
-      const response = await axios.post(host + '/ask_gpt', { question, history, username, model });
+      const response = await axios.post(host + '/ask_gpt', { question, history, username, model, temperature, max_tokens });
       return response.data.answer;
     } catch (err) {
       console.error('Error calling /ask_gpt:', err);
@@ -678,14 +682,14 @@ function App() {
     }
   }
 
-  // Update useEffect to pass username if available
+  // In useEffect, pass gptTemperature and gptMaxTokens to askGpt35
   useEffect(() => {
     if (!isGenerating) return;
     if (awaitingName) return;
-    console.log("Generating AI response with:", { prompt: prompt || text, model: selectedModel, username });
+    console.log("Generating AI response with:", { prompt: prompt || text, model: selectedModel, username, temperature: gptTemperature, max_tokens: gptMaxTokens });
 
     if (selectedModel.startsWith('gpt-')) {
-      askGpt35(prompt || text, conversationHistory, username, selectedModel)
+      askGpt35(prompt || text, conversationHistory, username, selectedModel, gptTemperature, gptMaxTokens)
         .then(answer => {
           setIsGenerating(false);
           if (answer) {
@@ -1119,6 +1123,39 @@ function App() {
             <option value="gpt-4">OpenAI GPT-4</option>
             <option value="gpt-4o">OpenAI GPT-4o</option>
           </select>
+        </div>
+
+        {/* Add controls for temperature and max tokens below the model selector */}
+        <div style={{ padding: '10px 20px', fontSize: '12px', color: '#fff', display: selectedModel.startsWith('gpt-') ? 'block' : 'none' }}>
+          <div style={{ marginBottom: 8 }}>
+            <label htmlFor="temp-slider" style={{ marginRight: 8 }}>Temperature:</label>
+            <input
+              id="temp-slider"
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              value={gptTemperature}
+              onChange={e => setGptTemperature(Number(e.target.value))}
+              style={{ verticalAlign: 'middle', width: 120 }}
+              disabled={isGenerating || speak}
+            />
+            <span style={{ marginLeft: 8 }}>{gptTemperature}</span>
+          </div>
+          <div>
+            <label htmlFor="max-tokens" style={{ marginRight: 8 }}>Max Tokens:</label>
+            <input
+              id="max-tokens"
+              type="number"
+              min={32}
+              max={4096}
+              step={1}
+              value={gptMaxTokens}
+              onChange={e => setGptMaxTokens(Number(e.target.value))}
+              style={{ width: 70 }}
+              disabled={isGenerating || speak}
+            />
+          </div>
         </div>
       </div>
 
