@@ -1012,7 +1012,17 @@ function App() {
         </Suspense>
       </Canvas>
 
-      <div style={STYLES.container}>
+      <div
+        style={{
+          ...STYLES.container,
+          resize: 'both',
+          overflow: 'auto',
+          minWidth: 320,
+          minHeight: 350,
+          maxWidth: 700,
+          maxHeight: 900
+        }}
+      >
         <div style={STYLES.header}>
           <div style={STYLES.avatar}>⚕️</div>
           <h3 style={STYLES.headerText}>Virtual Medical Assistant</h3>
@@ -1036,7 +1046,6 @@ function App() {
               </div>
             ))
           )}
-
           {isGenerating && (
             <div style={{ ...STYLES.messageAssistant, background: 'rgba(51, 65, 85, 0.5)' }}>
               <div style={STYLES.loadingDots}>
