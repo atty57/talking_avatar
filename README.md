@@ -16,10 +16,13 @@ This is a React-based 3D talking avatar application that uses Three.js and React
 
 - 3D avatar with realistic facial animations
 - Text-to-speech integration with lip-syncing
-- AI-powered conversational abilities through backend integration
+- AI-powered conversational abilities through backend integration (OpenAI GPT-3.5, GPT-4, GPT-4o, and more)
+- Model selection, temperature, and max tokens controls for GPT
+- Per-user memory (username collected in chat)
+- Advanced bias mitigation in AI responses
 - Speech-to-text functionality for voice input
 - Customizable facial expression settings
-- Modern chat interface
+- Modern, resizable chat interface (drag the bottom-right corner)
 
 ## Prerequisites
 
@@ -76,6 +79,14 @@ The avatar can be customized through several parameters in the `App.js` file:
 - Micro-expressions during pauses
 - Specific facial feature emphasis (mouth, eyes, etc.)
 
+## AI Chat Features
+
+- **Model Selection:** Choose between Llama3, Phi3, GPT-3.5 Turbo, GPT-4, GPT-4o, and more from the dropdown.
+- **Temperature & Max Tokens:** Adjust GPT creativity and response length live in the UI.
+- **Per-User Memory:** The assistant remembers your conversation context by username (entered in chat).
+- **Bias Mitigation:** Dr. Ava is tuned to avoid bias and stereotypes, and backend post-processing filters problematic phrases.
+- **Resizable Chat Box:** Drag the bottom-right corner of the chat interface to resize the whole chat window.
+
 ## Built With
 
 - [React](https://reactjs.org/) - Frontend framework
@@ -90,11 +101,12 @@ The frontend communicates with the backend server to:
 
 1. Send text to be converted to speech
 2. Get audio files and blendshape data for facial animations
-3. Optionally generate AI-powered responses
+3. Generate AI-powered responses with model/temperature/max tokens controls
 
 API endpoints used:
 - `/talk` - Main endpoint for text-to-speech with facial animation data
 - `/talk-stream` - Streaming version of the text-to-speech endpoint
+- `/ask_gpt` - OpenAI GPT chat endpoint (model selection, temp, max tokens, bias mitigation)
 
 ## Troubleshooting
 
