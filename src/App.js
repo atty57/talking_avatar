@@ -12,6 +12,7 @@ import blinkData from './blendDataBlink.json';
 
 import * as THREE from 'three';
 import axios from 'axios';
+import { generateDoctorNotePDF } from './utils/doctorNoteGenerator';
 const _ = require('lodash');
 
 const host = 'http://localhost:3001'
@@ -537,6 +538,9 @@ function App() {
   const [displayedAssistantText, setDisplayedAssistantText] = useState("");
   const typewriterIntervalRef = useRef(null);
   const [typewriterDone, setTypewriterDone] = useState(false);
+
+  // Add state for summarizing doctor's note
+  const [isSummarizing, setIsSummarizing] = useState(false);
 
   // Fetch voices from backend on mount
   useEffect(() => {
@@ -1223,6 +1227,57 @@ function App() {
               disabled={isGenerating || speak}
             />
           </div>
+        </div>
+
+        {/* Add Doctor's Note Download Button */}
+        <div style={{ textAlign: 'center', margin: '16px 0' }}>
+          <button
+            style={{
+              background: isSummarizing ? '#38bdf8' : '#0ea5e9',
+              color: 'white',
+              border: 'none',
+              borderRadius: 6,
+              padding: '10px 20px',
+              fontSize: 16,
+              cursor: isSummarizing ? 'wait' : 'pointer',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
+            }}
+            onClick={async () => {
+              setIsSummarizing(true);
+              // Filter out greetings from assistant messages
+              const adviceMessages = conversationHistory
+                .filter(m => m.role === 'assistant')
+                .filter(m => !/hello|nice to meet you|how can i help you today|what's your name/i.test(m.content))
+                .map(m => m.content)
+                .join('\n');
+              // If nothing left, fallback to last assistant message
+              const adviceForSummary = adviceMessages.trim() ? adviceMessages : (conversationHistory.find(m => m.role === 'assistant')?.content || '');
+              // Call backend to summarize
+              let summary = '';
+              try {
+                const response = await axios.post(host + '/ask_gpt', {
+                  question: `Summarize the following virtual medical assistant session as a doctor's note for the patient.\n\nUse this format:\n\nPatient Notes:\n- [Concise summary of patient's symptoms and relevant context, including the patient's name]\n\nDoctor's Advice:\n- [Concise, actionable advice in 1-2 sentences]\n\nOnly include the most important information. Do not repeat the patient's name in the advice section unless necessary.\n\nSession:\n${adviceForSummary}`,
+                  username,
+                  model: selectedModel,
+                  temperature: 0.3,
+                  max_tokens: 200
+                });
+                summary = response.data.answer;
+              } catch (e) {
+                summary = adviceForSummary || 'No advice to summarize.';
+              }
+              generateDoctorNotePDF({
+                patientName: username,
+                adviceSummary: summary,
+                date: new Date()
+              });
+              setIsSummarizing(false);
+            }}
+            disabled={awaitingName || conversationHistory.length < 2 || isSummarizing}
+            title={awaitingName ? 'Please enter your name first.' : 'Download a summary of the advice.'}
+          >
+            {isSummarizing ? 'Generating Doctor\'s Note...' : "Download Doctor's Note"}
+          </button>
         </div>
       </div>
 
