@@ -23,6 +23,7 @@ This is a React-based 3D talking avatar application that uses Three.js and React
 - Speech-to-text functionality for voice input
 - Customizable facial expression settings
 - Modern, resizable chat interface (drag the bottom-right corner)
+- **Doctor's Note PDF Generator:** After a session, generate a downloadable PDF summary (doctor's note) with patient symptoms and advice, using AI-powered summarization.
 
 ## Prerequisites
 
@@ -113,3 +114,21 @@ API endpoints used:
 - If the avatar is not visible, check browser console for Three.js errors
 - If speech is not playing, verify that audio is enabled in your browser
 - For network issues, check that the backend server is running and accessible
+
+## Doctor's Note PDF Generator
+
+After your conversation with Dr. Ava, you can generate a professional "Doctor's Note" PDF summarizing your session:
+
+- Click the **Download Doctor's Note** button below the chat area.
+- The assistant will automatically summarize the session using AI, filtering out greetings and focusing on your symptoms and the advice given.
+- The PDF includes:
+  - **Patient Name**
+  - **Date**
+  - **Patient Symptoms:** A concise summary of your symptoms and relevant context
+  - **Doctor's Advice:** Actionable, friendly advice from Dr. Ava
+- The summary is formatted for clarity, with no markdown or extra symbols.
+
+**How it works:**
+- All assistant messages (except greetings) are sent to the backend for summarization using GPT.
+- The prompt enforces a clear, bullet-point format for both symptoms and advice.
+- The PDF is generated instantly in your browser and can be saved or shared.
