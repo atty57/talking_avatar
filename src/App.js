@@ -506,6 +506,7 @@ function App() {
   // Conversation history for medical context
   const [conversationHistory, setConversationHistory] = useState([]);
   const conversationContainerRef = useRef(null);
+  const inputRef = useRef(null);
 
   // State for viseme fine-tuning
   const [visemeSettings, setVisemeSettings] = useState({
@@ -535,6 +536,7 @@ function App() {
   // Add state for typewriter effect
   const [displayedAssistantText, setDisplayedAssistantText] = useState("");
   const typewriterIntervalRef = useRef(null);
+  const [typewriterDone, setTypewriterDone] = useState(false);
 
   // Fetch voices from backend on mount
   useEffect(() => {
@@ -990,12 +992,11 @@ function App() {
 
   // Add useEffect for typewriter effect
   useEffect(() => {
-    // Only run when speak is true and the last message is from assistant
-    if (!speak) return;
-    // Find the last assistant message
+    // Only run when a new assistant message is added
     const lastAssistantMsg = [...conversationHistory].reverse().find(m => m.role === 'assistant');
     if (!lastAssistantMsg) return;
     setDisplayedAssistantText("");
+    setTypewriterDone(false);
     let i = 0;
     clearInterval(typewriterIntervalRef.current);
     typewriterIntervalRef.current = setInterval(() => {
@@ -1003,18 +1004,23 @@ function App() {
       setDisplayedAssistantText(lastAssistantMsg.content.slice(0, i));
       if (i >= lastAssistantMsg.content.length) {
         clearInterval(typewriterIntervalRef.current);
+        setTypewriterDone(true);
       }
-    }, 70); // Slower speed for better sync
+    }, 70); // Keep your chosen speed
     return () => clearInterval(typewriterIntervalRef.current);
-  }, [speak, conversationHistory]);
+  }, [conversationHistory]);
 
-  // Reset displayedAssistantText when speaking ends
+  // Replace the previous useEffect for focusing textarea with this improved version:
   useEffect(() => {
-    if (!speak) {
-      clearInterval(typewriterIntervalRef.current);
-      setDisplayedAssistantText("");
+    if (
+      typewriterDone &&
+      !speak &&
+      !isGenerating &&
+      inputRef.current
+    ) {
+      inputRef.current.focus();
     }
-  }, [speak]);
+  }, [typewriterDone, speak, isGenerating]);
 
   return (
     <div className="full">
@@ -1083,7 +1089,7 @@ function App() {
             </div>
           ) : (
             conversationHistory.map((message, index) => {
-              // If this is the last assistant message and avatar is speaking, show typewriter effect
+              // If this is the last assistant message, show typewriter effect if not done
               const isLastAssistant =
                 message.role === 'assistant' &&
                 index === conversationHistory.map(m => m.role).lastIndexOf('assistant');
@@ -1092,7 +1098,7 @@ function App() {
                   key={index}
                   style={message.role === 'user' ? STYLES.messageUser : STYLES.messageAssistant}
                 >
-                  {isLastAssistant && speak ? displayedAssistantText : message.content}
+                  {isLastAssistant && !typewriterDone ? displayedAssistantText : message.content}
                 </div>
               );
             })
@@ -1124,6 +1130,7 @@ function App() {
                   }
                 }
               }}
+              ref={inputRef}
             />
             {/* Microphone button for STT */}
             <button
