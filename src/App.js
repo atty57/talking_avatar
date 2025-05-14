@@ -17,7 +17,7 @@ const _ = require('lodash');
 
 const host = 'http://localhost:3001'
 
-function Avatar({ avatar_url, speak, setSpeak, text, setAudioSource, playing, visemeSettings, voiceParams }) {
+function Avatar({ avatar_url, speak, setSpeak, text, setAudioSource, playing, visemeSettings, voiceParams, currentLocale }) {
 
   let gltf = useGLTF(avatar_url);
   let morphTargetDictionaryBody = null;
@@ -173,7 +173,7 @@ function Avatar({ avatar_url, speak, setSpeak, text, setAudioSource, playing, vi
     if (speak === false)
       return;
 
-    makeSpeech(text, visemeSettings, false, "", null, voiceParams)
+    makeSpeech(text, visemeSettings, false, "", null, voiceParams, currentLocale)
       .then(response => {
         let { blendData, filename, generatedText } = response.data;
 
@@ -247,16 +247,15 @@ function Avatar({ avatar_url, speak, setSpeak, text, setAudioSource, playing, vi
   );
 }
 
-function makeSpeech(text, visemeSettings = {}, useAI = false, prompt = "", model = null, voiceParams = {}) {
+function makeSpeech(text, visemeSettings = {}, useAI = false, prompt = "", model = null, voiceParams = {}, locale = 'en-US') {
   return axios.post(host + '/talk', {
     text,
     useAI,
     prompt: prompt || text,
     model,
-    // Include voice parameters
     voiceName: voiceParams.voiceName,
     voiceStyle: voiceParams.voiceStyle,
-    // Include viseme settings
+    locale,
     ...visemeSettings
   });
 }
@@ -542,6 +541,9 @@ function App() {
   // Add state for summarizing doctor's note
   const [isSummarizing, setIsSummarizing] = useState(false);
 
+  // Add after voiceParams state
+  const [currentLocale, setCurrentLocale] = useState('en-US');
+
   // Fetch voices from backend on mount
   useEffect(() => {
     axios.get(host + '/voices')
@@ -564,6 +566,12 @@ function App() {
     // If the current style is not in the new styles, reset it
     if (selected && (!selected.styles.includes(voiceParams.voiceStyle))) {
       setVoiceParams(vp => ({ ...vp, voiceStyle: selected.styles[0] || '' }));
+    }
+    // Set locale
+    if (selected && selected.locale) {
+      setCurrentLocale(selected.locale);
+    } else {
+      setCurrentLocale('en-US');
     }
   }, [voiceParams.voiceName, voices]);
 
@@ -596,7 +604,7 @@ function App() {
     if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) return;
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     recognitionRef.current = new SpeechRecognition();
-    recognitionRef.current.lang = 'en-US';
+    recognitionRef.current.lang = currentLocale;
     recognitionRef.current.interimResults = false;
     recognitionRef.current.maxAlternatives = 1;
 
@@ -614,7 +622,7 @@ function App() {
     };
     recognitionRef.current.onend = () => setIsListening(false);
     recognitionRef.current.onerror = () => setIsListening(false);
-  }, []);
+  }, [currentLocale]);
 
   const startListening = () => {
     if (recognitionRef.current && !isListening && !(isGenerating || speak)) {
@@ -733,6 +741,7 @@ function App() {
         model: selectedModel,
         voiceName: voiceParams.voiceName,
         voiceStyle: voiceParams.voiceStyle,
+        locale: currentLocale,
         ...visemeSettings
       })
         .then(response => {
@@ -1063,6 +1072,7 @@ function App() {
             playing={playing}
             visemeSettings={visemeSettings}
             voiceParams={voiceParams}
+            currentLocale={currentLocale}
           />
         </Suspense>
       </Canvas>
