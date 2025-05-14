@@ -489,6 +489,45 @@ const STYLES = {
   }
 };
 
+// Add a simple modal component inside App.js
+function SettingsModal({ open, onClose, children }) {
+  if (!open) return null;
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0, left: 0, right: 0, bottom: 0,
+      background: 'rgba(0,0,0,0.35)',
+      zIndex: 9999,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    }}>
+      <div style={{
+        background: 'rgba(30, 41, 59, 0.97)',
+        borderRadius: 12,
+        minWidth: 340,
+        maxWidth: 420,
+        padding: 24,
+        boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
+        position: 'relative',
+        color: '#fff',
+      }}>
+        <button onClick={onClose} style={{
+          position: 'absolute',
+          top: 12,
+          right: 12,
+          background: 'none',
+          border: 'none',
+          color: '#fff',
+          fontSize: 22,
+          cursor: 'pointer',
+        }} title="Close">×</button>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const audioPlayer = useRef();
 
@@ -543,6 +582,9 @@ function App() {
 
   // Add after voiceParams state
   const [currentLocale, setCurrentLocale] = useState('en-US');
+
+  // Add state for settings modal
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Fetch voices from backend on mount
   useEffect(() => {
@@ -1094,6 +1136,28 @@ function App() {
           <div style={STYLES.statusBadge}>
             {isGenerating ? 'Analyzing...' : speak ? 'Speaking...' : 'Ready'}
           </div>
+          {/* Settings button */}
+          <button
+            onClick={() => setSettingsOpen(true)}
+            style={{
+              marginLeft: 16,
+              background: 'rgba(14, 116, 144, 0.9)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '50%',
+              width: 36,
+              height: 36,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              fontSize: 18,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
+            }}
+            title="Settings"
+          >
+            <span role="img" aria-label="settings">⚙️</span>
+          </button>
         </div>
 
         <div style={STYLES.conversationContainer} ref={conversationContainerRef}>
@@ -1177,69 +1241,10 @@ function App() {
           </div>
         </div>
 
-        {/* Voice Controls Section */}
-        {renderVoiceControls()}
-
-        {/* Viseme Controls Section */}
-        {renderVisemeControls()}
-
         <div style={STYLES.infoSection}>
           This is a virtual medical consultation. For medical emergencies, please call 911 or go to your nearest emergency room.
         </div>
 
-        {/* Move the model selector out of hiddenControls and make it visible above the chat input */}
-        <div style={{ padding: '10px 20px', borderTop: '1px solid rgba(100, 116, 139, 0.2)', fontSize: '12px', color: '#fff' }}>
-          <label htmlFor="model-select" style={{ marginRight: 8 }}>AI Model:</label>
-          <select
-            id="model-select"
-            value={selectedModel}
-            onChange={(e) => setSelectedModel(e.target.value)}
-            style={{ background: 'rgba(51, 65, 85, 0.5)', border: 'none', borderRadius: '4px', color: 'white', padding: '6px 8px', fontSize: '12px' }}
-            disabled={isGenerating || speak}
-          >
-            <option value="llama3.2">Clinical Expert (Llama3.2)</option>
-            <option value="llama3">Medical Specialist (Llama3)</option>
-            <option value="phi3">General Practitioner (Phi3)</option>
-            <option value="gpt-3.5-turbo">OpenAI GPT-3.5 Turbo</option>
-            <option value="gpt-4">OpenAI GPT-4</option>
-            <option value="gpt-4o">OpenAI GPT-4o</option>
-          </select>
-        </div>
-
-        {/* Add controls for temperature and max tokens below the model selector */}
-        <div style={{ padding: '10px 20px', fontSize: '12px', color: '#fff', display: selectedModel.startsWith('gpt-') ? 'block' : 'none' }}>
-          <div style={{ marginBottom: 8 }}>
-            <label htmlFor="temp-slider" style={{ marginRight: 8 }}>Temperature:</label>
-            <input
-              id="temp-slider"
-              type="range"
-              min={0}
-              max={1}
-              step={0.01}
-              value={gptTemperature}
-              onChange={e => setGptTemperature(Number(e.target.value))}
-              style={{ verticalAlign: 'middle', width: 120 }}
-              disabled={isGenerating || speak}
-            />
-            <span style={{ marginLeft: 8 }}>{gptTemperature}</span>
-          </div>
-          <div>
-            <label htmlFor="max-tokens" style={{ marginRight: 8 }}>Max Tokens:</label>
-            <input
-              id="max-tokens"
-              type="number"
-              min={32}
-              max={4096}
-              step={1}
-              value={gptMaxTokens}
-              onChange={e => setGptMaxTokens(Number(e.target.value))}
-              style={{ width: 70 }}
-              disabled={isGenerating || speak}
-            />
-          </div>
-        </div>
-
-        {/* Add Doctor's Note Download Button */}
         <div style={{ textAlign: 'center', margin: '16px 0' }}>
           <button
             style={{
@@ -1292,6 +1297,61 @@ function App() {
       </div>
 
       <Loader dataInterpolation={(p) => `Loading... please wait`} />
+
+      {/* Settings Modal */}
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)}>
+        <h2 style={{marginTop:0, marginBottom:16, fontSize:22}}>Settings</h2>
+        {renderVoiceControls()}
+        {renderVisemeControls()}
+        <div style={{ padding: '10px 0', borderTop: '1px solid rgba(100, 116, 139, 0.2)', fontSize: '12px', color: '#fff', marginTop: 16 }}>
+          <label htmlFor="model-select" style={{ marginRight: 8 }}>AI Model:</label>
+          <select
+            id="model-select"
+            value={selectedModel}
+            onChange={(e) => setSelectedModel(e.target.value)}
+            style={{ background: 'rgba(51, 65, 85, 0.5)', border: 'none', borderRadius: '4px', color: 'white', padding: '6px 8px', fontSize: '12px' }}
+            disabled={isGenerating || speak}
+          >
+            <option value="llama3.2">Clinical Expert (Llama3.2)</option>
+            <option value="llama3">Medical Specialist (Llama3)</option>
+            <option value="phi3">General Practitioner (Phi3)</option>
+            <option value="gpt-3.5-turbo">OpenAI GPT-3.5 Turbo</option>
+            <option value="gpt-4">OpenAI GPT-4</option>
+            <option value="gpt-4o">OpenAI GPT-4o</option>
+          </select>
+        </div>
+        <div style={{ padding: '10px 0', fontSize: '12px', color: '#fff', display: selectedModel.startsWith('gpt-') ? 'block' : 'none' }}>
+          <div style={{ marginBottom: 8 }}>
+            <label htmlFor="temp-slider" style={{ marginRight: 8 }}>Temperature:</label>
+            <input
+              id="temp-slider"
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              value={gptTemperature}
+              onChange={e => setGptTemperature(Number(e.target.value))}
+              style={{ verticalAlign: 'middle', width: 120 }}
+              disabled={isGenerating || speak}
+            />
+            <span style={{ marginLeft: 8 }}>{gptTemperature}</span>
+          </div>
+          <div>
+            <label htmlFor="max-tokens" style={{ marginRight: 8 }}>Max Tokens:</label>
+            <input
+              id="max-tokens"
+              type="number"
+              min={32}
+              max={4096}
+              step={1}
+              value={gptMaxTokens}
+              onChange={e => setGptMaxTokens(Number(e.target.value))}
+              style={{ width: 70 }}
+              disabled={isGenerating || speak}
+            />
+          </div>
+        </div>
+      </SettingsModal>
     </div>
   );
 }
