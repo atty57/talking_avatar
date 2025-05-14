@@ -24,6 +24,7 @@ This is a React-based 3D talking avatar application that uses Three.js and React
 - Customizable facial expression settings
 - Modern, resizable chat interface (drag the bottom-right corner)
 - **Doctor's Note PDF Generator:** After a session, generate a downloadable PDF summary (doctor's note) with patient symptoms and advice, using AI-powered summarization.
+- **Settings Modal:** All advanced controls (expression controls, voice settings, model selection, temperature, max tokens) are now accessible via a Settings button in the chat header for a cleaner interface.
 
 ## Prerequisites
 
@@ -82,11 +83,21 @@ The avatar can be customized through several parameters in the `App.js` file:
 
 ## AI Chat Features
 
-- **Model Selection:** Choose between Llama3, Phi3, GPT-3.5 Turbo, GPT-4, GPT-4o, and more from the dropdown.
-- **Temperature & Max Tokens:** Adjust GPT creativity and response length live in the UI.
 - **Per-User Memory:** The assistant remembers your conversation context by username (entered in chat).
 - **Bias Mitigation:** Dr. Ava is tuned to avoid bias and stereotypes, and backend post-processing filters problematic phrases.
 - **Resizable Chat Box:** Drag the bottom-right corner of the chat interface to resize the whole chat window.
+- **Advanced Controls:** Access model selection, temperature, max tokens, voice, and expression controls via the Settings modal (⚙️ button in chat header).
+
+## Settings Modal
+
+The chat interface now features a **Settings** (⚙️) button in the top right of the chat header. Clicking this button opens a modal popup containing all advanced controls:
+
+- **Expression Controls:** Fine-tune facial animation intensity, smoothing, idle expressions, and advanced viseme settings.
+- **Voice Settings:** Select the avatar's voice and speaking style.
+- **AI Model Selection:** Choose between Llama3, GPT-3.5 Turbo, GPT-4, GPT-4o, and more.
+- **Temperature & Max Tokens:** Adjust GPT creativity and response length.
+
+These controls are no longer shown directly in the chat area, keeping the main interface clean and focused on conversation. Close the modal to return to chatting.
 
 ## Built With
 
