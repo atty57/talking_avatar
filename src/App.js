@@ -532,6 +532,10 @@ function App() {
   const [voices, setVoices] = useState([]);
   const [availableStyles, setAvailableStyles] = useState([]);
 
+  // Add state for typewriter effect
+  const [displayedAssistantText, setDisplayedAssistantText] = useState("");
+  const typewriterIntervalRef = useRef(null);
+
   // Fetch voices from backend on mount
   useEffect(() => {
     axios.get(host + '/voices')
@@ -984,6 +988,34 @@ function App() {
     );
   };
 
+  // Add useEffect for typewriter effect
+  useEffect(() => {
+    // Only run when speak is true and the last message is from assistant
+    if (!speak) return;
+    // Find the last assistant message
+    const lastAssistantMsg = [...conversationHistory].reverse().find(m => m.role === 'assistant');
+    if (!lastAssistantMsg) return;
+    setDisplayedAssistantText("");
+    let i = 0;
+    clearInterval(typewriterIntervalRef.current);
+    typewriterIntervalRef.current = setInterval(() => {
+      i++;
+      setDisplayedAssistantText(lastAssistantMsg.content.slice(0, i));
+      if (i >= lastAssistantMsg.content.length) {
+        clearInterval(typewriterIntervalRef.current);
+      }
+    }, 70); // Slower speed for better sync
+    return () => clearInterval(typewriterIntervalRef.current);
+  }, [speak, conversationHistory]);
+
+  // Reset displayedAssistantText when speaking ends
+  useEffect(() => {
+    if (!speak) {
+      clearInterval(typewriterIntervalRef.current);
+      setDisplayedAssistantText("");
+    }
+  }, [speak]);
+
   return (
     <div className="full">
       <ReactAudioPlayer
@@ -1050,14 +1082,20 @@ function App() {
               Hello, I'm your Virtual Medical Assistant. I'm here to help understand your symptoms and provide guidance. How can I help you today?
             </div>
           ) : (
-            conversationHistory.map((message, index) => (
-              <div
-                key={index}
-                style={message.role === 'user' ? STYLES.messageUser : STYLES.messageAssistant}
-              >
-                {message.content}
-              </div>
-            ))
+            conversationHistory.map((message, index) => {
+              // If this is the last assistant message and avatar is speaking, show typewriter effect
+              const isLastAssistant =
+                message.role === 'assistant' &&
+                index === conversationHistory.map(m => m.role).lastIndexOf('assistant');
+              return (
+                <div
+                  key={index}
+                  style={message.role === 'user' ? STYLES.messageUser : STYLES.messageAssistant}
+                >
+                  {isLastAssistant && speak ? displayedAssistantText : message.content}
+                </div>
+              );
+            })
           )}
           {isGenerating && (
             <div style={{ ...STYLES.messageAssistant, background: 'rgba(51, 65, 85, 0.5)' }}>
