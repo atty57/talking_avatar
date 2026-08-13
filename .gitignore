@@ -21,3 +21,7 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Local env — CRA only ignores .env.local by default, so .env itself
+# was being tracked and leaked REACT_APP_ALTER_API.
+.env

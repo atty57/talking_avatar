@@ -260,6 +260,15 @@ function makeSpeech(text, visemeSettings = {}, useAI = false, prompt = "", model
   });
 }
 
+// Gemini and OpenAI both go through /ask_gpt (which owns the per-user history
+// and the bias filter). Ollama models go through /talk with useAI instead.
+const usesChatEndpoint = (model) => model.startsWith('gpt-') || model.startsWith('gemini');
+
+// Shown in the standing disclaimer before any triage result exists. The
+// backend is the source of truth per-response (EMERGENCY_REGION in .env);
+// this is only the idle default.
+const DEFAULT_EMERGENCY_NUMBER = '112';
+
 const STYLES = {
   container: {
     position: 'absolute',
@@ -423,6 +432,32 @@ const STYLES = {
     color: '#94a3b8',
     textAlign: 'center'
   },
+  triageBannerEmergency: {
+    margin: '0 20px 12px 20px',
+    padding: '12px 14px',
+    borderRadius: '8px',
+    background: 'rgba(153, 27, 27, 0.92)',
+    border: '1px solid #ef4444',
+    color: '#fff',
+    fontSize: '13px',
+    lineHeight: 1.5
+  },
+  // Deliberately not red. A crisis message should read as support, not alarm.
+  triageBannerCrisis: {
+    margin: '0 20px 12px 20px',
+    padding: '12px 14px',
+    borderRadius: '8px',
+    background: 'rgba(30, 64, 110, 0.95)',
+    border: '1px solid #60a5fa',
+    color: '#fff',
+    fontSize: '13px',
+    lineHeight: 1.5
+  },
+  triageTitle: {
+    fontWeight: 700,
+    marginBottom: '6px',
+    fontSize: '14px'
+  },
   hiddenControls: {
     display: 'none'
   },
@@ -540,7 +575,7 @@ function App() {
   const [useAI, setUseAI] = useState(true); // Set to true by default for medical assistant
   const [prompt, setPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [selectedModel, setSelectedModel] = useState("gpt-3.5-turbo");
+  const [selectedModel, setSelectedModel] = useState("gemini-2.5-flash");
 
   // Conversation history for medical context
   const [conversationHistory, setConversationHistory] = useState([]);
@@ -565,7 +600,7 @@ function App() {
   // Voice selection state
   const [voiceParams, setVoiceParams] = useState({
     voiceName: "en-US-AriaNeural",
-    voiceStyle: "empathetic"
+    voiceStyle: "auto"
   });
 
   // Add state for dynamic voices and styles
@@ -586,6 +621,13 @@ function App() {
   // Add state for settings modal
   const [settingsOpen, setSettingsOpen] = useState(false);
 
+  // Active red-flag triage result from /ask_gpt, or null.
+  const [triage, setTriage] = useState(null);
+
+  // Per-reply speaking style resolved by the backend. A ref, not state, so the
+  // value is readable synchronously when speech is triggered.
+  const activeStyleRef = useRef(null);
+
   // Fetch voices from backend on mount
   useEffect(() => {
     axios.get(host + '/voices')
@@ -605,9 +647,11 @@ function App() {
   useEffect(() => {
     const selected = voices.find(v => v.name === voiceParams.voiceName);
     setAvailableStyles(selected && selected.styles.length > 0 ? selected.styles : []);
-    // If the current style is not in the new styles, reset it
-    if (selected && (!selected.styles.includes(voiceParams.voiceStyle))) {
-      setVoiceParams(vp => ({ ...vp, voiceStyle: selected.styles[0] || '' }));
+    // If the current style is not in the new styles, reset it. 'auto' is not a
+    // real Azure style and is never in that list, so it must be exempt or
+    // switching voices would silently turn tone-matching off.
+    if (selected && voiceParams.voiceStyle !== 'auto' && !selected.styles.includes(voiceParams.voiceStyle)) {
+      setVoiceParams(vp => ({ ...vp, voiceStyle: selected.styles.length > 0 ? 'auto' : '' }));
     }
     // Set locale
     if (selected && selected.locale) {
@@ -693,6 +737,10 @@ function App() {
     setAudioSource(null);
     setSpeak(false);
     setPlaying(false);
+    // Don't reopen the mic after an emergency or crisis message. Auto-listening
+    // pulls the person straight back into the chat when the whole point of the
+    // reply was to get them to stop talking to an avatar and call someone.
+    if (triage) return;
     // Automatically start listening again after response
     setTimeout(() => {
       if (recognitionRef.current && !isListening && !(isGenerating || speak)) {
@@ -743,8 +791,12 @@ function App() {
   // Pass temperature and max tokens to askGpt35 and backend
   async function askGpt35(question, history, username, model, temperature, max_tokens) {
     try {
-      const response = await axios.post(host + '/ask_gpt', { question, history, username, model, temperature, max_tokens });
-      return response.data.answer;
+      const response = await axios.post(host + '/ask_gpt', {
+        question, history, username, model, temperature, max_tokens,
+        // The backend picks the tone when this is 'auto', and honours it otherwise.
+        voiceStyle: voiceParams.voiceStyle,
+      });
+      return response.data;
     } catch (err) {
       console.error('Error calling /ask_gpt:', err);
       throw err;
@@ -757,10 +809,16 @@ function App() {
     if (awaitingName) return;
     console.log("Generating AI response with:", { prompt: prompt || text, model: selectedModel, username, temperature: gptTemperature, max_tokens: gptMaxTokens });
 
-    if (selectedModel.startsWith('gpt-')) {
+    if (usesChatEndpoint(selectedModel)) {
       askGpt35(prompt || text, conversationHistory, username, selectedModel, gptTemperature, gptMaxTokens)
-        .then(answer => {
+        .then(data => {
           setIsGenerating(false);
+          const answer = data && data.answer;
+          setTriage((data && data.triage) || null);
+          // Tone chosen for this specific reply. Held in a ref because the
+          // Avatar's speak effect reads it in the same tick that setSpeak(true)
+          // schedules, and a state update would not have landed yet.
+          if (data && data.voiceStyle) activeStyleRef.current = data.voiceStyle;
           if (answer) {
             setText(answer);
             setConversationHistory(prev => [...prev, {
@@ -869,9 +927,12 @@ function App() {
             disabled={isGenerating || speak || availableStyles.length === 0}
           >
             {availableStyles.length > 0 ? (
-              availableStyles.map(style => (
-                <option key={style} value={style}>{style.charAt(0).toUpperCase() + style.slice(1)}</option>
-              ))
+              [
+                <option key="auto" value="auto">Auto (match the mood)</option>,
+                ...availableStyles.map(style => (
+                  <option key={style} value={style}>{style.charAt(0).toUpperCase() + style.slice(1)}</option>
+                ))
+              ]
             ) : (
               <option value="">(No style)</option>
             )}
@@ -1113,7 +1174,13 @@ function App() {
             setAudioSource={setAudioSource}
             playing={playing}
             visemeSettings={visemeSettings}
-            voiceParams={voiceParams}
+            voiceParams={{
+              ...voiceParams,
+              // Per-reply tone when the backend chose one; otherwise whatever
+              // Settings says. 'auto' is safe to send — the backend resolves
+              // it against the voice's supported styles.
+              voiceStyle: activeStyleRef.current || voiceParams.voiceStyle,
+            }}
             currentLocale={currentLocale}
           />
         </Suspense>
@@ -1241,8 +1308,33 @@ function App() {
           </div>
         </div>
 
+        {triage && (
+          <div style={triage.kind === 'mental-health' ? STYLES.triageBannerCrisis : STYLES.triageBannerEmergency}>
+            {triage.kind === 'mental-health' ? (
+              <>
+                <div style={STYLES.triageTitle}>You don't have to face this alone</div>
+                <div>
+                  Crisis support: <strong>{triage.crisisLine}</strong>
+                  <br />
+                  If you are in immediate danger, call <strong>{triage.emergencyNumber}</strong>.
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={STYLES.triageTitle}>⚠ This may need emergency care</div>
+                <div>
+                  Call <strong>{triage.emergencyNumber}</strong> or go to the nearest emergency department now.
+                  <br />
+                  Do not wait to see if it improves.
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
         <div style={STYLES.infoSection}>
-          This is a virtual medical consultation. For medical emergencies, please call 911 or go to your nearest emergency room.
+          This is a virtual medical consultation. For medical emergencies, call{' '}
+          {(triage && triage.emergencyNumber) || DEFAULT_EMERGENCY_NUMBER} or go to your nearest emergency room.
         </div>
 
         <div style={{ textAlign: 'center', margin: '16px 0' }}>
@@ -1312,6 +1404,9 @@ function App() {
             style={{ background: 'rgba(51, 65, 85, 0.5)', border: 'none', borderRadius: '4px', color: 'white', padding: '6px 8px', fontSize: '12px' }}
             disabled={isGenerating || speak}
           >
+            <option value="gemini-2.5-flash">Gemini 2.5 Flash (fast)</option>
+            <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite (fastest)</option>
+            <option value="gemini-2.5-pro">Gemini 2.5 Pro (most capable)</option>
             <option value="llama3.2">Clinical Expert (Llama3.2)</option>
             <option value="llama3">Medical Specialist (Llama3)</option>
             <option value="phi3">General Practitioner (Phi3)</option>
@@ -1320,7 +1415,7 @@ function App() {
             <option value="gpt-4o">OpenAI GPT-4o</option>
           </select>
         </div>
-        <div style={{ padding: '10px 0', fontSize: '12px', color: '#fff', display: selectedModel.startsWith('gpt-') ? 'block' : 'none' }}>
+        <div style={{ padding: '10px 0', fontSize: '12px', color: '#fff', display: usesChatEndpoint(selectedModel) ? 'block' : 'none' }}>
           <div style={{ marginBottom: 8 }}>
             <label htmlFor="temp-slider" style={{ marginRight: 8 }}>Temperature:</label>
             <input
